@@ -1,0 +1,13 @@
+.button-as-dropdown {
+  text-align: left;
+}
+
+.arrow {
+  float: right;
+  vertical-align: middle;
+}
+
+.dropdown-menu > li > a {
+  color: black;
+  vertical-align: middle;
+}
