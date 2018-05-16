@@ -1,4 +1,6 @@
 
+if [ ! -d droidstar ]; then git clone git@github.com:cuplv/droidstar; fi
+
 docker run -it --privileged \
   -v $(pwd)/sdk:/opt/android-sdk:ro \
   -v $(pwd)/internal-setup:/root/setup:ro \
