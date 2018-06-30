@@ -1,8 +1,0 @@
-
-if [ ! -d droidstar ]; then git clone git@github.com:cuplv/droidstar; fi
-
-docker run -it --privileged \
-  -v $(pwd)/sdk:/opt/android-sdk:ro \
-  -v $(pwd)/internal-setup:/root/setup:ro \
-  -v $(pwd/../driver-app/target/android/output/droidstar-debug-unaligned.apk:/root/droidstar.apk \
-  thyrlian/android-sdk /bin/bash
