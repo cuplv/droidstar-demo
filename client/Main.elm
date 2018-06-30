@@ -74,8 +74,8 @@ update msg model =
     Connected s ->
       let k = String.split ":" s
       in case k of
-        ("dbg"::m::[]) -> ({ model | debugs = prependBounded 5 m model.debugs }, Cmd.none)
-        ("rsl"::m::[]) -> ({ model | resultTS = Just m }, Cmd.none)
+        ("dbg"::m) -> ({ model | debugs = prependBounded 10 (String.concat m) model.debugs }, Cmd.none)
+        ("rsl"::m) -> ({ model | resultTS = Just (String.concat m) }, Cmd.none)
         _ -> ({ model | connection = Just s }, Cmd.none)
 
 imgsrc : Model -> String

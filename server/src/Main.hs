@@ -17,10 +17,12 @@ import qualified Network.WebSockets             as WS
 import qualified Safe
 
 import Turtle
+import qualified Control.Foldl as Foldl
 
 main :: IO ()
 main = do 
   putStrLn "Starting..."
+  proc "adb" ["connect","172.17.0.2"] empty
   state <- Concurrent.newMVar []
   Warp.run 3000 $ WS.websocketsOr
     WS.defaultConnectionOptions
@@ -54,9 +56,10 @@ listen :: WS.Connection -> ClientId -> Concurrent.MVar State -> IO ()
 listen conn clientId stateRef = Monad.forever $ do
   -- WS.receiveData conn >>= broadcast clientId stateRef
   msg <- WS.receiveData conn :: IO Text.Text
+  let send = WS.sendTextData conn
   case msg of
+
     "req:AsyncTask" -> do 
-      let send = WS.sendTextData conn
       send "dbg:Setting up..."
       send "dbg:Asdf1"
       send "dbg:Asdf2"
@@ -69,9 +72,14 @@ listen conn clientId stateRef = Monad.forever $ do
       stdout (inproc "echo" ["Doing a thing..."] empty)
       file <- readFile "./a.txt"
       send . Text.pack $ ("rsl:" ++ file)
+
     "req:CountDownTimer" -> do
-      undefined
-    _ -> putStrLn . Text.unpack $ ("Got unknown msg: " <> msg)
+      send "dbg:Running experiment..."
+      proc "adb" ["install","droidstar-debug.apk"] empty
+      stdout (inproc "adb" ["shell","am","start","-a","android.intent.action.MAIN","-n","edu.colorado.plv.droidstar.experiments/.MainActivity"] empty)
+      foldIO (grep (choice [has "DROIDSTAR",has "STARLING"]) (inshell "adb logcat" empty)) (Foldl.mapM_ ((\a -> send a >> print a) . ("dbg:" <>) . lineToText))
+    --   foldIO (inshell "adb logcat" empty) (Foldl.mapM_ (print . ("dbg:" <>) . lineToText))
+    -- _ -> putStrLn . Text.unpack $ ("Got unknown msg: " <> msg)
 
 -- broadcast :: ClientId -> Concurrent.MVar State -> Text.Text -> IO ()
 -- broadcast clientId stateRef msg = do
