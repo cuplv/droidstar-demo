@@ -1,18 +1,12 @@
 # DroidStar Web Demo #
 
-This is written in [Elm][1].  To try it out, [install Elm][2] and
-follow these steps:
+To build the docker images for client and server, you will need
+`cabal`, `elm`, and `sbt`.  Running `make` will produce both images.
 
-    $ git clone https://github.com/cuplv/droidstar-demo
-    $ cd droidstar-demo/client
-    $ elm-reactor
+The running system requires three containers in all:
 
-The demo should now be live on `localhost:8000` (or whatever address
-`elm-reactor` tells you).
+1. An android emulator image, with port link `5555:5555`
+2. The server image, with port link `3000:3000`.
+3. The client image, with port link `8080:80`
 
-The minimal setup implemented so far is based on the example usage
-from the [`elm-typed-dropdown`][3] package
-
-[1]: http://elm-lang.org
-[2]: https://guide.elm-lang.org/install.html
-[3]: http://package.elm-lang.org/packages/fedragon/elm-typed-dropdown
+The client can then be reached on `localhost:8080`.
