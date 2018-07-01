@@ -22,7 +22,7 @@ import qualified Control.Foldl as Foldl
 main :: IO ()
 main = do 
   putStrLn "Starting..."
-  proc "adb" ["connect","172.17.0.2"] empty
+  proc "adb" ["connect","127.0.0.1"] empty
   state <- Concurrent.newMVar []
   Warp.run 3000 $ WS.websocketsOr
     WS.defaultConnectionOptions
@@ -75,18 +75,9 @@ listen conn clientId stateRef = Monad.forever $ do
 
     "req:CountDownTimer" -> do
       send "dbg:Running experiment..."
-      proc "adb" ["install","droidstar-debug.apk"] empty
+      proc "adb" ["install","/root/droidstar-debug.apk"] empty
       stdout (inproc "adb" ["shell","am","start","-a","android.intent.action.MAIN","-n","edu.colorado.plv.droidstar.experiments/.MainActivity"] empty)
       foldIO (grep (choice [has "DROIDSTAR",has "STARLING"]) (inshell "adb logcat" empty)) (Foldl.mapM_ ((\a -> send a >> print a) . ("dbg:" <>) . lineToText))
-    --   foldIO (inshell "adb logcat" empty) (Foldl.mapM_ (print . ("dbg:" <>) . lineToText))
-    -- _ -> putStrLn . Text.unpack $ ("Got unknown msg: " <> msg)
-
--- broadcast :: ClientId -> Concurrent.MVar State -> Text.Text -> IO ()
--- broadcast clientId stateRef msg = do
---   clients <- Concurrent.readMVar stateRef
---   let otherClients = withoutClient clientId clients
---   Monad.forM_ otherClients $ \(_, conn) ->
---     WS.sendTextData conn msg
     
 wsApp :: Concurrent.MVar State -> WS.ServerApp
 wsApp stateRef pendingConn = do
