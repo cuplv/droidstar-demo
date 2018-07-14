@@ -2,11 +2,13 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import WebSocket
+import Navigation
 
 import Dropdown exposing (Dropdown, Event(ItemSelected))
 
 main =
-  Html.program
+  Navigation.program
+    (\_ -> NoMsg)
     { init = init
     , view = view
     , update = update
@@ -29,15 +31,16 @@ type alias Model =
   , connection : Maybe String
   , debugs : List String
   , resultTS : Maybe TS
+  , loc : String
   }
 
 prependBounded : Int -> a -> List a -> List a
 prependBounded n a l = List.take n (a::l)
 
-type Msg = ExpSelected (Dropdown.Msg Experiment) | Connected String
+type Msg = ExpSelected (Dropdown.Msg Experiment) | Connected String | NoMsg
 
-init : (Model, Cmd Msg)
-init =
+init : Navigation.Location -> (Model, Cmd Msg)
+init l =
   (Model
     Dropdown.init
     [ Experiment "/static/asdf.png" "CountDownTimer"
@@ -47,16 +50,18 @@ init =
     Nothing
     []
     Nothing
+    l.hostname
   ,Cmd.none)
 
 -- UPDATE
 
-wsUrl : String
-wsUrl = "ws://localhost:3000"
+wsUrl : String -> String
+wsUrl hostname = "ws://" ++ hostname ++ ":3000"
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
+    NoMsg -> (model, Cmd.none)
     ExpSelected ddmsg ->
       let
         ( updatedDropdown, event ) =
@@ -68,7 +73,7 @@ update msg model =
                 | dropdown = updatedDropdown
                 , selectedItem = Just exp
             }
-            , WebSocket.send wsUrl ("req:" ++ exp.name))
+            , WebSocket.send (wsUrl model.loc) ("req:" ++ exp.name))
           _ -> ({ model | dropdown = updatedDropdown }, Cmd.none)
     -- Connected s -> ({ model | connection = Just s }, Cmd.none)
     Connected s ->
@@ -87,7 +92,7 @@ imgsrc model =
 -- SUBS
 
 subscriptions : Model -> Sub Msg
-subscriptions model = WebSocket.listen wsUrl Connected
+subscriptions model = WebSocket.listen (wsUrl model.loc) Connected
 
 -- VIEW
 

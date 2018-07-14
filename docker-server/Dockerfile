@@ -9,6 +9,7 @@ RUN apk add alpine-sdk git ca-certificates gmp-dev zlib-dev linux-headers musl-d
 RUN apk add ghc cabal
 RUN cabal update
 RUN cabal install text wai wai-websockets warp websockets http-types safe containers mtl turtle aeson optparse-applicative foldl parsec
+RUN cabal install dns
 
 COPY ./_server /root/server
 COPY ./_droidstar-debug.apk /root/droidstar-debug.apk

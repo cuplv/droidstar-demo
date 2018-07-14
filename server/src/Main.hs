@@ -24,7 +24,7 @@ import qualified Control.Foldl as Foldl
 
 main :: IO ()
 main = do 
-  Concurrent.threadDelay (1000 * 1000 * 60)
+  Concurrent.threadDelay (1000 * 1000 * 120)
   putStrLn "Starting..."
   ip <- getIP
   case ip of
