@@ -15,20 +15,45 @@ import qualified Network.Wai.Handler.Warp       as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
 import qualified Network.WebSockets             as WS
 import qualified Safe
+import Network.DNS.Resolver
+import Network.DNS.Lookup
+import Network.DNS.Types (DNSError)
 
 import Turtle
 import qualified Control.Foldl as Foldl
 
 main :: IO ()
 main = do 
+  Concurrent.threadDelay (1000 * 1000 * 60)
   putStrLn "Starting..."
-  proc "adb" ["connect","127.0.0.1"] empty
-  state <- Concurrent.newMVar []
-  Warp.run 3000 $ WS.websocketsOr
-    WS.defaultConnectionOptions
-    (wsApp state)
-    httpApp
-    
+  ip <- getIP
+  case ip of
+    Right [ipaddr] -> 
+      do connectAdb ipaddr
+         state <- Concurrent.newMVar []
+         Warp.run 3000 $ WS.websocketsOr
+           WS.defaultConnectionOptions
+           (wsApp state)
+           httpApp
+    _ -> die "No ip"
+
+getIP :: IO (Either DNSError [String])
+getIP = do 
+  rs <- makeResolvSeed defaultResolvConf
+  ip <- withResolver rs $ \resolver -> lookupA resolver "emulator.lan"
+  return (fmap (map show) ip)
+
+connectAdb :: String -> IO ()
+connectAdb ip = do 
+  e <- proc "adb" ["connect",Text.pack ip] empty
+  case e of
+    ExitFailure _ -> do
+      putStrLn "Emulator was not ready, retrying..."
+      Concurrent.threadDelay (1000 * 1000 * 4)
+      connectAdb ip
+    ExitSuccess -> do
+      putStrLn "Connected to emulator."
+
 httpApp :: Wai.Application
 httpApp _ respond = respond $ Wai.responseLBS Http.status400 [] "Not a websocket request"
 
