@@ -1,6 +1,6 @@
 /client/elm-stuff/*
 /server/dist/*
-/docker-client/index.html
+/docker-client/html/*
 /docker-server/_server
 /docker-server/_droidstar-debug.apk
 /client/index.html
