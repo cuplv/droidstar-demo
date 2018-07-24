@@ -31,7 +31,7 @@ main = do
     Right [ipaddr] -> 
       do connectAdb ipaddr
          state <- Concurrent.newMVar []
-         Warp.run 3000 $ WS.websocketsOr
+         Warp.run 30025 $ WS.websocketsOr
            WS.defaultConnectionOptions
            (wsApp state)
            httpApp

@@ -3,11 +3,11 @@ services:
   client:
     image: droidstar-demo-client:latest
     ports:
-      - "2768:80"
+      - "30023:80"
   server:
     image: droidstar-demo-server:latest
     ports:
-      - "3000:3000"
+      - "30025:30025"
   "emulator.lan":
     image: 88d0a790ace3
     privileged: true

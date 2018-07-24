@@ -56,7 +56,7 @@ init l =
 -- UPDATE
 
 wsUrl : String -> String
-wsUrl hostname = "ws://" ++ hostname ++ ":3000"
+wsUrl hostname = "ws://" ++ hostname ++ ":30025"
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
