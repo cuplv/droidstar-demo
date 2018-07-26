@@ -10,11 +10,12 @@ RUN apk add ghc cabal
 RUN cabal update
 RUN cabal install text wai wai-websockets warp websockets http-types safe containers mtl turtle aeson optparse-applicative foldl parsec
 RUN cabal install dns
+RUN cabal install process
 
 COPY ./_server /root/server
 COPY ./_droidstar-debug.apk /root/droidstar-debug.apk
 
-RUN cd /root/server && cabal install --only-dependencies && cabal configure && cabal build
+RUN cd /root/server && cabal configure && cabal build
 RUN cp /root/server/dist/build/droidstar-demo-server/droidstar-demo-server /bin/droidstar-demo-server
 
 CMD ["/bin/droidstar-demo-server"]

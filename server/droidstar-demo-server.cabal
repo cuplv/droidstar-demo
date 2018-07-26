@@ -28,5 +28,6 @@ executable droidstar-demo-server
                      , foldl
                      , parsec
                      , dns
+                     , process
   hs-source-dirs:      src
   default-language:    Haskell2010
