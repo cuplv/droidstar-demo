@@ -3,6 +3,8 @@
 
 module Main where
 
+import Prelude hiding (FilePath)
+
 import qualified Control.Concurrent             as Concurrent
 import qualified Control.Exception              as Exception
 import qualified Control.Monad                  as Monad
@@ -25,15 +27,26 @@ import qualified System.Process as Proc
 import Turtle
 import qualified Control.Foldl as Foldl
 
+data Config = Config { emuAddr :: Maybe String
+                     , apksDir :: FilePath
+                     , initDelay :: Int }
+
+cfg = Config (Just "172.17.0.2") (fromText "..") 0
+-- cfg = Config Nothing (fromText "/root") 120
+
 main :: IO ()
 main = do 
   putStrLn "Starting..."
   IO.hFlush IO.stdout
-  ip <- getIP
+  ip <- case emuAddr cfg of
+          Just ip -> return $ Right [ip]
+          Nothing -> getIP
+  -- ip <- getIP
   -- let ip = Right ["127.0.0.1"]
+  -- let ip = Right ["172.17.0.2"]
   case ip of
     Right [ipaddr] -> 
-      do Concurrent.threadDelay (1000 * 1000 * 120)
+      do Concurrent.threadDelay (1000 * 1000 * (initDelay cfg))
          connectAdb ipaddr
          state <- Concurrent.newMVar []
          Warp.run 30025 $ WS.websocketsOr
@@ -105,23 +118,32 @@ listen conn clientId stateRef = Monad.forever $ do
     --   file <- readFile "./a.txt"
     --   send . Text.pack $ ("rsl:" ++ file)
 
-    "req:CountDownTimer" -> experiment send "/root/droidstar-debug.apk"
+    "req:CountDownTimer" -> experiment send (fromText "droidstar-debug.apk")
       -- send "dbg:Running experiment..."
       -- proc "adb" ["install","/root/droidstar-debug.apk"] empty
       -- Turtle.stdout (inproc "adb" ["shell","am","start","-a","android.intent.action.MAIN","-n","edu.colorado.plv.droidstar.experiments/.MainActivity"] empty)
       -- followLog send
       -- send "dbg:All done."
 
+resultsPath :: Text
+resultsPath = 
+  "/sdcard/Android/data/edu.colorado.plv.droidStar.experiments/files/results"
+
 experiment send f = do
   send "dbg:Running experiment..."
-  proc "adb" ["install",f] empty
+  proc "adb" ["install",format fp ((apksDir cfg) <> f)] empty
   Turtle.stdout (inproc "adb" ["shell","am","start","-a","android.intent.action.MAIN","-n","edu.colorado.plv.droidstar.experiments/.MainActivity"] empty)
   followLog send
   send "dbg:All done."
   Turtle.shell 
-    "adb pull /sdcard/Android/data/edu.colorado.plv.droidStar.experiments/files/results ./"
+    ("adb pull " <> resultsPath <> " ./")
     empty
 
+sendResults name send = do 
+  Turtle.shell ("adb pull " <> resultsPath <> " ./") empty
+  graph <- readTextFile (fromText "results" 
+                         <> fromText (name <> "-diagram.gv"))
+  send $ "res:" <> graph
 
 followLog :: (Text -> IO ()) -> IO ()
 followLog send = logcatDS >>= r
