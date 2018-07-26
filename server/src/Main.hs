@@ -24,7 +24,6 @@ import qualified Control.Foldl as Foldl
 
 main :: IO ()
 main = do 
-  Concurrent.threadDelay (1000 * 1000 * 120)
   putStrLn "Starting..."
   ip <- getIP
   case ip of
@@ -44,15 +43,13 @@ getIP = do
   return (fmap (map show) ip)
 
 connectAdb :: String -> IO ()
-connectAdb ip = do 
-  e <- proc "adb" ["connect",Text.pack ip] empty
-  case e of
-    ExitFailure _ -> do
-      putStrLn "Emulator was not ready, retrying..."
-      Concurrent.threadDelay (1000 * 1000 * 4)
-      connectAdb ip
-    ExitSuccess -> do
-      putStrLn "Connected to emulator."
+connectAdb ip = do
+  (_,o) <- procStrict "adb" ["connect",Text.pack ip] empty
+  if Text.isPrefixOf "unable" o
+     then do putStrLn "Emulator was not ready, retrying in 10s..."
+             Concurrent.threadDelay (1000 * 1000 * 10)
+             connectAdb ip
+     else putStrLn "Connected to emulator."
 
 httpApp :: Wai.Application
 httpApp _ respond = respond $ Wai.responseLBS Http.status400 [] "Not a websocket request"
