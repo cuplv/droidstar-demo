@@ -57,6 +57,7 @@ init l =
 
 wsUrl : String -> String
 wsUrl hostname = "ws://" ++ hostname ++ ":30025"
+-- wsUrl _ = "ws://" ++ "127.0.0.1" ++ ":30025"
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -77,10 +78,12 @@ update msg model =
           _ -> ({ model | dropdown = updatedDropdown }, Cmd.none)
     -- Connected s -> ({ model | connection = Just s }, Cmd.none)
     Connected s ->
-      let k = String.split ":" s
+      -- let k = String.split ":" s
+      let k = String.left 4 s
+          p = String.dropLeft 4 s
       in case k of
-        ("dbg"::m) -> ({ model | debugs = prependBounded 10 (String.concat m) model.debugs }, Cmd.none)
-        ("rsl"::m) -> ({ model | resultTS = Just (String.concat m) }, Cmd.none)
+        ("dbg:") -> ({ model | debugs = prependBounded 10 p model.debugs }, Cmd.none)
+        ("res:") -> ({ model | resultTS = Just p }, Cmd.none)
         _ -> ({ model | connection = Just s }, Cmd.none)
 
 imgsrc : Model -> String
@@ -101,6 +104,7 @@ view : Model -> Html Msg
 view model =
   div []
     [ Html.node "link" [ Html.Attributes.rel "stylesheet", Html.Attributes.href "/css/dropdown.css" ] []
+    , h1 [] [text "Inputs"]
     , Html.map ExpSelected <|
         Dropdown.view
           model.items
@@ -108,10 +112,15 @@ view model =
           .name
           model.dropdown
     -- , Html.img [ src (imgsrc model), width 300, height 300] []
+    , h1 [] [text "Learning"]
     , div []
       [ div [] (List.map (\dm -> pre [] [text dm]) (List.reverse model.debugs))
-      , case model.resultTS of
-          Just ts -> pre [] [text ts]
-          Nothing -> text ""
       ]
+    , h1 [] [text "Results"]
+    -- , case model.resultTS of
+    --     Just _ -> text "Something."
+    --     Nothing -> text "Nothing yet."
+    , case model.resultTS of
+        Just ts -> pre [] [text ts]
+        Nothing -> text ""
     ]

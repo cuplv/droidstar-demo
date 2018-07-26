@@ -31,8 +31,8 @@ data Config = Config { emuAddr :: Maybe String
                      , apksDir :: FilePath
                      , initDelay :: Int }
 
-cfg = Config (Just "172.17.0.2") (fromText "..") 0
--- cfg = Config Nothing (fromText "/root") 120
+-- cfg = Config (Just "172.17.0.2") (fromText "..") 0
+cfg = Config Nothing (fromText "/root") 120
 
 main :: IO ()
 main = do 
@@ -103,56 +103,45 @@ listen conn clientId stateRef = Monad.forever $ do
   msg <- WS.receiveData conn :: IO Text.Text
   let send = WS.sendTextData conn
   case msg of
-
-    -- "req:AsyncTask" -> do 
-    --   send "dbg:Setting up..."
-    --   send "dbg:Asdf1"
-    --   send "dbg:Asdf2"
-    --   send "dbg:Asdf3"
-    --   send "dbg:Asdf4"
-    --   send "dbg:Asdf5"
-    --   send "dbg:Asdf6"
-    --   send "dbg:Asdf7"
-    --   send "dbg:Asdf8"
-    --   Turtle.stdout (inproc "echo" ["Doing a thing..."] empty)
-    --   file <- readFile "./a.txt"
-    --   send . Text.pack $ ("rsl:" ++ file)
-
-    "req:CountDownTimer" -> experiment send (fromText "droidstar-debug.apk")
-      -- send "dbg:Running experiment..."
-      -- proc "adb" ["install","/root/droidstar-debug.apk"] empty
-      -- Turtle.stdout (inproc "adb" ["shell","am","start","-a","android.intent.action.MAIN","-n","edu.colorado.plv.droidstar.experiments/.MainActivity"] empty)
-      -- followLog send
-      -- send "dbg:All done."
+    "req:AsyncTask" -> send "dbg:Not implemented..."
+    "req:CountDownTimer" -> experiment send "CountDownTimer"
 
 resultsPath :: Text
 resultsPath = 
   "/sdcard/Android/data/edu.colorado.plv.droidStar.experiments/files/results"
 
-experiment send f = do
+experiment send name = do
   send "dbg:Running experiment..."
-  proc "adb" ["install",format fp ((apksDir cfg) <> f)] empty
+  let apk = (apksDir cfg) <> fromText (name <> ".apk")
+  shell "adb logcat -c" empty
+  proc "adb" ["install",format fp apk] empty
   Turtle.stdout (inproc "adb" ["shell","am","start","-a","android.intent.action.MAIN","-n","edu.colorado.plv.droidstar.experiments/.MainActivity"] empty)
   followLog send
   send "dbg:All done."
-  Turtle.shell 
-    ("adb pull " <> resultsPath <> " ./")
-    empty
+  sendResults send name
+  shell "adb logcat -c" empty
+  return ()
 
-sendResults name send = do 
+sendResults send name = do 
   Turtle.shell ("adb pull " <> resultsPath <> " ./") empty
-  graph <- readTextFile (fromText "results" 
-                         <> fromText (name <> "-diagram.gv"))
+  let graphPath = fromText "results" <> fromText (name <> "-diagram.gv")
+  putStrLn (Text.unpack (format fp graphPath))
+  Concurrent.threadDelay (1000 * 1000 * 4)
+  graph <- readTextFile graphPath
   send $ "res:" <> graph
+  putStrLn (Text.unpack graph)
 
 followLog :: (Text -> IO ()) -> IO ()
 followLog send = logcatDS >>= r
   where r (n,k) = do l <- n
-                     if not (Text.isInfixOf "Completed learning" l)
-                        then do let l' = "dbg:" <> l
-                                send l'
-                                print l'
-                                r (n,k)
+                     if and [not (Text.isInfixOf "Completed learning" l)]
+                        then do if Text.isInfixOf ":Q:" l
+                                   then do let l' = "dbg:" <> snd (Text.breakOn ":Q:" l)
+                                           send l'
+                                           print l'
+                                   else return ()
+                                r (n,k) 
+
                         else k
 
 logcatDS :: IO (IO Text,IO ())
