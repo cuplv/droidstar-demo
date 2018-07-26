@@ -13,7 +13,7 @@ RUN cabal install dns
 RUN cabal install process
 
 COPY ./_server /root/server
-COPY ./_droidstar-debug.apk /root/droidstar-debug.apk
+COPY ./_apks /root/apks
 
 RUN cd /root/server && cabal configure && cabal build
 RUN cp /root/server/dist/build/droidstar-demo-server/droidstar-demo-server /bin/droidstar-demo-server

@@ -32,7 +32,7 @@ data Config = Config { emuAddr :: Maybe String
                      , initDelay :: Int }
 
 -- cfg = Config (Just "172.17.0.2") (fromText "..") 0
-cfg = Config Nothing (fromText "/root") 120
+cfg = Config Nothing (fromText "/root/apks") 120
 
 main :: IO ()
 main = do 
