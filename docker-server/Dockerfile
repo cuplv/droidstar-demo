@@ -11,6 +11,12 @@ RUN cabal update
 RUN cabal install text wai wai-websockets warp websockets http-types safe containers mtl turtle aeson optparse-applicative foldl parsec
 RUN cabal install dns
 RUN cabal install process
+RUN cabal install SHA bytestring
+
+# See https://github.com/docker-library/openjdk/issues/73
+RUN apk add ttf-dejavu
+
+RUN apk add graphviz
 
 COPY ./_server /root/server
 COPY ./_apks /root/apks

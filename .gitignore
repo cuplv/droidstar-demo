@@ -6,3 +6,7 @@
 /client/index.html
 /droidstar
 /server/cabal-shell.nix
+/server/results
+/server/res
+/*.apk
+/docker-server/_apks

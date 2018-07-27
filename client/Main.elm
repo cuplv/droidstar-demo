@@ -86,11 +86,6 @@ update msg model =
         ("res:") -> ({ model | resultTS = Just p }, Cmd.none)
         _ -> ({ model | connection = Just s }, Cmd.none)
 
-imgsrc : Model -> String
-imgsrc model =
-  case model.selectedItem of
-    Nothing -> "/static/nothing.png"
-    Just e -> e.imgSrc
 
 -- SUBS
 
@@ -99,6 +94,10 @@ subscriptions model = WebSocket.listen (wsUrl model.loc) Connected
 
 -- VIEW
 
+resultsHost = "127.0.0.1"
+
+resultsURI : String -> String -> String
+resultsURI l f = "http://" ++ l ++ ":30025/" ++ f
 
 view : Model -> Html Msg
 view model =
@@ -111,16 +110,12 @@ view model =
           model.selectedItem
           .name
           model.dropdown
-    -- , Html.img [ src (imgsrc model), width 300, height 300] []
     , h1 [] [text "Learning"]
     , div []
       [ div [] (List.map (\dm -> pre [] [text dm]) (List.reverse model.debugs))
       ]
     , h1 [] [text "Results"]
-    -- , case model.resultTS of
-    --     Just _ -> text "Something."
-    --     Nothing -> text "Nothing yet."
     , case model.resultTS of
-        Just ts -> pre [] [text ts]
+        Just ts -> img [ src (resultsURI model.loc ts) ] []
         Nothing -> text ""
     ]

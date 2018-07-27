@@ -11,6 +11,7 @@ import qualified Control.Monad                  as Monad
 import qualified Data.List                      as List
 import qualified Data.Maybe                     as Maybe
 import qualified Data.Text                      as Text
+import Data.Text.Encoding (decodeUtf8,encodeUtf8)
 import qualified Network.HTTP.Types             as Http
 import qualified Network.Wai                    as Wai
 import qualified Network.Wai.Handler.Warp       as Warp
@@ -27,6 +28,9 @@ import qualified System.Process as Proc
 import Turtle
 import qualified Control.Foldl as Foldl
 
+import Data.Digest.Pure.SHA (sha1,showDigest)
+import qualified Data.ByteString.Lazy as BL
+
 data Config = Config { emuAddr :: Maybe String
                      , apksDir :: FilePath
                      , initDelay :: Int }
@@ -41,9 +45,6 @@ main = do
   ip <- case emuAddr cfg of
           Just ip -> return $ Right [ip]
           Nothing -> getIP
-  -- ip <- getIP
-  -- let ip = Right ["127.0.0.1"]
-  -- let ip = Right ["172.17.0.2"]
   case ip of
     Right [ipaddr] -> 
       do Concurrent.threadDelay (1000 * 1000 * (initDelay cfg))
@@ -70,12 +71,22 @@ connectAdb ip = do
              Concurrent.threadDelay (1000 * 1000 * 10)
              connectAdb ip
      else do putStrLn "Connected to emulator."
-             -- putStrLn (show (Text.unpack o))
-             -- putStrLn "That's what it said."
              IO.hFlush IO.stdout
 
 httpApp :: Wai.Application
-httpApp _ respond = respond $ Wai.responseLBS Http.status400 [] "Not a websocket request"
+httpApp request respond = do
+  putStrLn "Handling an HTTP request..."
+  case Wai.pathInfo request of
+    ["res",img] -> do
+      respond $ Wai.responseFile
+        Http.status200
+        [("Content-Type", "image/png")]
+        ("./res/" ++ Text.unpack img)
+        Nothing
+    _ -> respond $ Wai.responseLBS
+      Http.status400 
+      []
+      "Not a results request."
 
 type ClientId = Int
 type Client = (ClientId, WS.Connection)
@@ -99,7 +110,6 @@ disconnectClient clientId stateRef = Concurrent.modifyMVar_ stateRef $ \state ->
   
 listen :: WS.Connection -> ClientId -> Concurrent.MVar State -> IO ()
 listen conn clientId stateRef = Monad.forever $ do
-  -- WS.receiveData conn >>= broadcast clientId stateRef
   msg <- WS.receiveData conn :: IO Text.Text
   let send = WS.sendTextData conn
   case msg of
@@ -126,10 +136,13 @@ sendResults send name = do
   Turtle.shell ("adb pull " <> resultsPath <> " ./") empty
   let graphPath = fromText "results" <> fromText (name <> "-diagram.gv")
   putStrLn (Text.unpack (format fp graphPath))
-  Concurrent.threadDelay (1000 * 1000 * 4)
   graph <- readTextFile graphPath
-  send $ "res:" <> graph
-  putStrLn (Text.unpack graph)
+  let graphHash = Text.pack . showDigest . sha1 . BL.fromStrict . encodeUtf8 $ graph
+  let imgPath = "res/" <> graphHash <> ".png"
+  shell "mkdir -p res" empty
+  proc "dot" ["-Tpng","-o" <> imgPath,format fp graphPath] empty
+  send $ "res:" <> imgPath
+  putStrLn (Text.unpack imgPath)
 
 followLog :: (Text -> IO ()) -> IO ()
 followLog send = logcatDS >>= r
