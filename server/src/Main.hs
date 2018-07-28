@@ -72,6 +72,10 @@ connectAdb ip = do
              connectAdb ip
      else do putStrLn "Connected to emulator."
              IO.hFlush IO.stdout
+             let apk = (apksDir cfg) <> "droidstar.apk"
+             proc "adb" ["install","-r",format fp apk] empty
+             putStrLn "Installed experiments."
+             IO.hFlush IO.stdout
 
 httpApp :: Wai.Application
 httpApp request respond = do
@@ -113,8 +117,9 @@ listen conn clientId stateRef = Monad.forever $ do
   msg <- WS.receiveData conn :: IO Text.Text
   let send = WS.sendTextData conn
   case msg of
-    "req:AsyncTask" -> send "dbg:Not implemented..."
+    "req:AsyncTask" ->      experiment send "AsyncTask"
     "req:CountDownTimer" -> experiment send "CountDownTimer"
+    _ -> putStrLn "Received unhandled request."
 
 resultsPath :: Text
 resultsPath = 
@@ -122,15 +127,20 @@ resultsPath =
 
 experiment send name = do
   send "dbg:Running experiment..."
-  let apk = (apksDir cfg) <> fromText (name <> ".apk")
   shell "adb logcat -c" empty
-  proc "adb" ["install",format fp apk] empty
-  Turtle.stdout (inproc "adb" ["shell","am","start","-a","android.intent.action.MAIN","-n","edu.colorado.plv.droidstar.experiments/.MainActivity"] empty)
+  -- proc "adb" ["install",format fp apk] empty
+  -- Turtle.stdout (inproc "adb" ["shell","am","start","-a","android.intent.action.MAIN","-n","edu.colorado.plv.droidstar.experiments/.MainActivity"] empty)
+  launchExp name
   followLog send
   send "dbg:All done."
   sendResults send name
   shell "adb logcat -c" empty
   return ()
+
+launchExp :: Text -> IO ()
+launchExp name = 
+  let a = "edu.colorado.plv.droidstar.experiments/." <> name <> "Activity"
+  in proc "adb" ["shell","am","start","-n",a] empty >> return ()
 
 sendResults send name = do 
   Turtle.shell ("adb pull " <> resultsPath <> " ./") empty

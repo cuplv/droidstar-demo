@@ -2,7 +2,7 @@ default: droidstar
 	cd client && elm make Main.elm --output index.html
 	cp -r server docker-server/_server
 	mkdir -p docker-server/_apks
-	cp droidstar/driver-app/target/android/output/droidstar-debug.apk docker-server/_apks/CountDownTimer.apk
+	cp droidstar/driver-app/target/android/output/droidstar-debug.apk docker-server/_apks/droidstar.apk
 	docker build docker-server --tag droidstar-demo-server:latest
 
 	mkdir -p docker-client/html
