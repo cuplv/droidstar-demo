@@ -31,12 +31,16 @@ import qualified Control.Foldl as Foldl
 import Data.Digest.Pure.SHA (sha1,showDigest)
 import qualified Data.ByteString.Lazy as BL
 
+import qualified Text.Parsec as Ps
+
+import Prettify
+
 data Config = Config { emuAddr :: Maybe String
                      , apksDir :: FilePath
                      , initDelay :: Int }
 
--- cfg = Config (Just "172.17.0.2") (fromText "..") 0
-cfg = Config Nothing (fromText "/root/apks") 120
+cfg = Config (Just "172.17.0.2") (fromText "..") 0
+-- cfg = Config Nothing (fromText "/root/apks") 120
 
 main :: IO ()
 main = do 
@@ -128,8 +132,6 @@ resultsPath =
 experiment send name = do
   send "dbg:Running experiment..."
   shell "adb logcat -c" empty
-  -- proc "adb" ["install",format fp apk] empty
-  -- Turtle.stdout (inproc "adb" ["shell","am","start","-a","android.intent.action.MAIN","-n","edu.colorado.plv.droidstar.experiments/.MainActivity"] empty)
   launchExp name
   followLog send
   send "dbg:All done."
@@ -154,25 +156,40 @@ sendResults send name = do
   send $ "res:" <> imgPath
   putStrLn (Text.unpack imgPath)
 
+-- followLog :: (Text -> IO ()) -> IO ()
+-- followLog send = logcatDS >>= r
+--   where r (n,k) = do l <- n
+--                      if and [not (Text.isInfixOf "Completed learning" l)]
+--                         then do if Text.isInfixOf ":Q:" l
+--                                    then do let l' = "dbg:" <> snd (Text.breakOn ":Q:" l)
+--                                            send l'
+--                                            print l'
+--                                    else return ()
+--                                 r (n,k) 
+
+--                         else k
+
+
 followLog :: (Text -> IO ()) -> IO ()
 followLog send = logcatDS >>= r
-  where r (n,k) = do l <- n
-                     if and [not (Text.isInfixOf "Completed learning" l)]
-                        then do if Text.isInfixOf ":Q:" l
-                                   then do let l' = "dbg:" <> snd (Text.breakOn ":Q:" l)
-                                           send l'
-                                           print l'
-                                   else return ()
-                                r (n,k) 
-
-                        else k
+  where r (next,kill) = do
+          (Right msg) <- Ps.parse msgp "" <$> next
+          case msg of
+            DsQueryOk is os -> undefined
+            DsQueryNo is -> undefined
+            DsCheck t -> undefined
+            DsResult t -> undefined
 
 logcatDS :: IO (IO Text,IO ())
 logcatDS = do (_,Just hout,_,ph) <- Proc.createProcess 
                                       (Proc.proc "adb" ["logcat"]){ Proc.std_out = Proc.CreatePipe}
+              -- let next = do l <- Text.pack <$> IO.hGetLine hout
+              --               if or [Text.isInfixOf "DROIDSTAR" l
+              --                     ,Text.isInfixOf "STARLING" l]
+              --                  then return l
+              --                  else next
               let next = do l <- Text.pack <$> IO.hGetLine hout
-                            if or [Text.isInfixOf "DROIDSTAR" l
-                                  ,Text.isInfixOf "STARLING" l]
+                            if Text.isInfixOf "DROIDSTAR:NG:" l
                                then return l
                                else next
               let kill = Proc.terminateProcess ph >> IO.hClose hout
