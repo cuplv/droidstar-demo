@@ -16,7 +16,9 @@ import Text.Parsec (runParserT)
 import Turtle
 import qualified System.IO as IO
 import qualified System.Process as Proc
+import qualified Control.Concurrent as Concurrent
 
+import Config
 import EmuMsg
 
 connectAdb :: String -> IO ()

@@ -10,7 +10,7 @@ cabal-version:       >=1.10
 
 executable droidstar-demo-server
   main-is:             Main.hs
-  other-modules:       EmuComm, ClientComm, TypeState
+  other-modules:       EmuComm, ClientComm, TypeState, EmuMsg, Config
   build-depends:       base >=4.9 && <4.11
                      , text
                      , wai

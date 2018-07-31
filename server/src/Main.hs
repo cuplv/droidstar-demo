@@ -33,15 +33,10 @@ import qualified Data.ByteString.Lazy as BL
 
 import qualified Text.Parsec as Ps
 
+import Config
 import EmuComm
 import ClientComm
 
-data Config = Config { emuAddr :: Maybe String
-                     , apksDir :: FilePath
-                     , initDelay :: Int }
-
-cfg = Config (Just "172.17.0.2") (fromText "..") 0
--- cfg = Config Nothing (fromText "/root/apks") 120
 
 main :: IO ()
 main = do 
@@ -105,7 +100,7 @@ disconnectClient clientId stateRef = Concurrent.modifyMVar_ stateRef $ \state ->
 listen :: WS.Connection -> ClientId -> Concurrent.MVar State -> IO ()
 listen conn clientId stateRef = Monad.forever $ do
   msg <- WS.receiveData conn :: IO Text.Text
-  let send = WS.sendTextData conn
+  let send = sendCMsg conn
   case msg of
     "req:AsyncTask" ->      experiment send "AsyncTask"
     "req:CountDownTimer" -> experiment send "CountDownTimer"
@@ -116,37 +111,33 @@ listen conn clientId stateRef = Monad.forever $ do
 --   "/sdcard/Android/data/edu.colorado.plv.droidStar.experiments/files/results"
 
 experiment send name = do
-  send "dbg:Running experiment..."
   clearLog
+  send (CAlert "Running experiment...")
   launchExp name
   followLog send
-  send "dbg:All done."
-  sendResults send name
-  clearLog
-  return ()
+  send (CAlert "All done.")
 
-sendResults send name = do 
-  Turtle.shell ("adb pull " <> resultsPath <> " ./") empty
-  let graphPath = fromText "results" <> fromText (name <> "-diagram.gv")
-  putStrLn (Text.unpack (format fp graphPath))
-  graph <- readTextFile graphPath
-  let graphHash = Text.pack . showDigest . sha1 . BL.fromStrict . encodeUtf8 $ graph
-  let imgPath = "res/" <> graphHash <> ".png"
-  shell "mkdir -p res" empty
-  proc "dot" ["-Tpng","-o" <> imgPath,format fp graphPath] empty
-  send $ "res:" <> imgPath
-  putStrLn (Text.unpack imgPath)
+-- sendResults send name = do 
+--   Turtle.shell ("adb pull " <> resultsPath <> " ./") empty
+--   let graphPath = fromText "results" <> fromText (name <> "-diagram.gv")
+--   putStrLn (Text.unpack (format fp graphPath))
+--   graph <- readTextFile graphPath
+--   let graphHash = Text.pack . showDigest . sha1 . BL.fromStrict . encodeUtf8 $ graph
+--   let imgPath = "res/" <> graphHash <> ".png"
+--   shell "mkdir -p res" empty
+--   proc "dot" ["-Tpng","-o" <> imgPath,format fp graphPath] empty
+--   send $ "res:" <> imgPath
+--   putStrLn (Text.unpack imgPath)
 
-followLog :: (Text -> IO ()) -> IO ()
+followLog :: (CMsg -> IO ()) -> IO ()
 followLog send = logcatDS >>= r
   where r (next,kill) = do
           msg <-  next
           case msg of
-            DsQueryOk is os -> undefined
-            DsQueryNo is -> undefined
-            DsCheck t -> undefined
-            DsResult t -> undefined
-
+            DsQueryOk is os -> send (CQueryOk is os)
+            DsQueryNo is -> send (CQueryNo is)
+            DsCheck t -> send (CCheck t)
+            DsResult t -> send (CResult t)
 
 wsApp :: Concurrent.MVar State -> WS.ServerApp
 wsApp stateRef pendingConn = do
