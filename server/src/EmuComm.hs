@@ -49,8 +49,10 @@ logcatDS = do (_,Just hout,_,ph) <- Proc.createProcess
                                       (Proc.proc "adb" ["logcat"]){ Proc.std_out = Proc.CreatePipe}
               let next = do l <- Text.pack <$> IO.hGetLine hout
                             if Text.isInfixOf "DROIDSTAR:NG:" l
-                               then do (Right msg) <- runParserT msgp () "" l
-                                       return msg
+                               then do (mmsg) <- runParserT msgp () "" l
+                                       case mmsg of
+                                         Right msg -> return msg
+                                         Left e -> die (Text.pack (show e))
                                else next
               let kill = Proc.terminateProcess ph >> IO.hClose hout
               return (next,kill)

@@ -17,11 +17,21 @@ data EmuMsg =
   | DsCheck Text
   | DsCex [Text]
   | DsResult Text
+  deriving (Show,Eq,Ord)
 
 mkOk :: Text -> EmuMsg
 mkOk t = 
   case Text.splitOn ";" t of
-    is:os:[] -> DsQueryOk (Text.splitOn "," is) (Text.splitOn "," os)
+    is:os:[] -> DsQueryOk (splitOn' "," is) (filter (\t -> t /= "+") (splitOn' "," os))
+
+splitOn' sep t = case Text.splitOn sep t of
+                   [""] -> []
+                   r -> map rep r
+
+rep :: Text -> Text
+rep t | t == "delta" = "(CB?)"
+      | t == "beta" = "(none)"
+      | otherwise = t
 
 mkNo :: Text -> EmuMsg
 mkNo t = DsQueryNo (Text.splitOn "," t)
@@ -31,10 +41,10 @@ mkCex t = DsCex (Text.splitOn "," t)
 
 msgp :: ParsecT Text () IO EmuMsg
 msgp = 
-  string "DROIDSTAR:NG:" 
+  manyTill anyToken (try (string "DROIDSTAR:NG:"))
   >> choice 
-       [ mkOk     <$> (string "QUERY:OK:" >> space >> getInput)
-       , mkNo     <$> (string "Query:NO:" >> space >> getInput)
-       , DsCheck  <$> (string "CHECK:" >> space >> getInput >>= liftIO . mkTS)
-       , mkCex    <$> (string "CEX:" >> space >> getInput)
-       , DsResult <$> (string "RESULT:" >> space >> getInput) ]
+       [ mkOk     <$> try (string "QUERY:OK:" >> space >> getInput)
+       , mkNo     <$> try (string "QUERY:NO:" >> space >> getInput)
+       , DsCheck  <$> try (string "CHECK:" >> space >> getInput >>= liftIO . mkTS)
+       , mkCex    <$> try (string "CEX:" >> space >> getInput)
+       , DsResult <$> try (string "RESULT:" >> space >> getInput >>= liftIO . mkTS) ]

@@ -66,11 +66,11 @@ httpApp :: Wai.Application
 httpApp request respond = do
   putStrLn "Handling an HTTP request..."
   case Wai.pathInfo request of
-    ["res",img] -> do
+    ["typestates",img] -> do
       respond $ Wai.responseFile
         Http.status200
         [("Content-Type", "image/png")]
-        ("./res/" ++ Text.unpack img)
+        ("./typestates/" ++ Text.unpack img)
         Nothing
     _ -> respond $ Wai.responseLBS
       Http.status400 
@@ -132,12 +132,14 @@ experiment send name = do
 followLog :: (CMsg -> IO ()) -> IO ()
 followLog send = logcatDS >>= r
   where r (next,kill) = do
-          msg <-  next
+          msg <- next
+          print msg
+          let more = r (next,kill)
           case msg of
-            DsQueryOk is os -> send (CQueryOk is os)
-            DsQueryNo is -> send (CQueryNo is)
-            DsCheck t -> send (CCheck t)
-            DsResult t -> send (CResult t)
+            DsQueryOk is os -> send (CQueryOk is os) >> more
+            DsQueryNo is -> send (CQueryNo is) >> more
+            DsCheck t -> send (CCheck t) >> more
+            DsResult t -> send (CResult t) >> kill
 
 wsApp :: Concurrent.MVar State -> WS.ServerApp
 wsApp stateRef pendingConn = do

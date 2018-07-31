@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module TypeState (mkTS) where
+module TypeState (mkTS,tsDir) where
 
 import Prelude hiding (FilePath)
 

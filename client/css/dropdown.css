@@ -1,13 +1,47 @@
 .button-as-dropdown {
-  text-align: left;
+    text-align: left;
 }
 
 .arrow {
-  float: right;
-  vertical-align: middle;
+    float: right;
+    vertical-align: middle;
 }
 
 .dropdown-menu > li > a {
-  color: black;
-  vertical-align: middle;
+    color: black;
+    vertical-align: middle;
+}
+
+.trace > span > span {
+    margin-left: 0.1em;
+    margin-right: 0.1em;
+    border-style: solid;
+    padding: 0.2em;
+}
+
+.tracesep {
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+}
+
+.okin {
+    background-color: LightGreen;
+}
+
+.okout {
+    background-color: LightBlue;
+}
+
+.errin {
+    background-color: LightPink;
+}
+
+ul.traces > li {
+    margin-top: 1.2em;
+}
+
+ul.traces {
+    max-height: 15em;
+    overflow: auto;
+    padding-bottom: 1em;
 }

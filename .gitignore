@@ -9,3 +9,4 @@
 /server/res
 /*.apk
 /docker-server/_apks
+/server/typestates
