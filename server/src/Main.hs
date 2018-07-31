@@ -33,7 +33,8 @@ import qualified Data.ByteString.Lazy as BL
 
 import qualified Text.Parsec as Ps
 
-import Prettify
+import EmuComm
+import ClientComm
 
 data Config = Config { emuAddr :: Maybe String
                      , apksDir :: FilePath
@@ -65,21 +66,6 @@ getIP = do
   rs <- makeResolvSeed defaultResolvConf
   ip <- withResolver rs $ \resolver -> lookupA resolver "emulator.lan"
   return (fmap (map show) ip)
-
-connectAdb :: String -> IO ()
-connectAdb ip = do
-  (_,o) <- procStrict "adb" ["connect",Text.pack ip] empty
-  if Text.isInfixOf "unable" o
-     then do putStrLn "Emulator was not ready, retrying in 10s..."
-             IO.hFlush IO.stdout
-             Concurrent.threadDelay (1000 * 1000 * 10)
-             connectAdb ip
-     else do putStrLn "Connected to emulator."
-             IO.hFlush IO.stdout
-             let apk = (apksDir cfg) <> "droidstar.apk"
-             proc "adb" ["install","-r",format fp apk] empty
-             putStrLn "Installed experiments."
-             IO.hFlush IO.stdout
 
 httpApp :: Wai.Application
 httpApp request respond = do
@@ -125,24 +111,19 @@ listen conn clientId stateRef = Monad.forever $ do
     "req:CountDownTimer" -> experiment send "CountDownTimer"
     _ -> putStrLn "Received unhandled request."
 
-resultsPath :: Text
-resultsPath = 
-  "/sdcard/Android/data/edu.colorado.plv.droidStar.experiments/files/results"
+-- resultsPath :: Text
+-- resultsPath = 
+--   "/sdcard/Android/data/edu.colorado.plv.droidStar.experiments/files/results"
 
 experiment send name = do
   send "dbg:Running experiment..."
-  shell "adb logcat -c" empty
+  clearLog
   launchExp name
   followLog send
   send "dbg:All done."
   sendResults send name
-  shell "adb logcat -c" empty
+  clearLog
   return ()
-
-launchExp :: Text -> IO ()
-launchExp name = 
-  let a = "edu.colorado.plv.droidstar.experiments/." <> name <> "Activity"
-  in proc "adb" ["shell","am","start","-n",a] empty >> return ()
 
 sendResults send name = do 
   Turtle.shell ("adb pull " <> resultsPath <> " ./") empty
@@ -156,44 +137,16 @@ sendResults send name = do
   send $ "res:" <> imgPath
   putStrLn (Text.unpack imgPath)
 
--- followLog :: (Text -> IO ()) -> IO ()
--- followLog send = logcatDS >>= r
---   where r (n,k) = do l <- n
---                      if and [not (Text.isInfixOf "Completed learning" l)]
---                         then do if Text.isInfixOf ":Q:" l
---                                    then do let l' = "dbg:" <> snd (Text.breakOn ":Q:" l)
---                                            send l'
---                                            print l'
---                                    else return ()
---                                 r (n,k) 
-
---                         else k
-
-
 followLog :: (Text -> IO ()) -> IO ()
 followLog send = logcatDS >>= r
   where r (next,kill) = do
-          (Right msg) <- Ps.parse msgp "" <$> next
+          msg <-  next
           case msg of
             DsQueryOk is os -> undefined
             DsQueryNo is -> undefined
             DsCheck t -> undefined
             DsResult t -> undefined
 
-logcatDS :: IO (IO Text,IO ())
-logcatDS = do (_,Just hout,_,ph) <- Proc.createProcess 
-                                      (Proc.proc "adb" ["logcat"]){ Proc.std_out = Proc.CreatePipe}
-              -- let next = do l <- Text.pack <$> IO.hGetLine hout
-              --               if or [Text.isInfixOf "DROIDSTAR" l
-              --                     ,Text.isInfixOf "STARLING" l]
-              --                  then return l
-              --                  else next
-              let next = do l <- Text.pack <$> IO.hGetLine hout
-                            if Text.isInfixOf "DROIDSTAR:NG:" l
-                               then return l
-                               else next
-              let kill = Proc.terminateProcess ph >> IO.hClose hout
-              return (next,kill)
 
 wsApp :: Concurrent.MVar State -> WS.ServerApp
 wsApp stateRef pendingConn = do
