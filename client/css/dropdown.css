@@ -45,3 +45,36 @@ ul.traces {
     overflow: auto;
     padding-bottom: 1em;
 }
+
+.cex > span {
+    margin-right: 0.5em;
+}
+
+.cex > span > span {
+    margin-left: 0.1em;
+    margin-right: 0.1em;
+    border-style: solid;
+    padding: 0.2em;
+}
+
+.cexin {
+    background-color: LightSalmon;
+}
+
+img.good-ts {
+    border-style: solid;
+    border-color: green;
+    border-width: 6px;
+}
+
+img.unsure-ts {
+    border-style: solid;
+    border-color: orange;
+    border-width: 6px;
+}
+
+img.bad-ts {
+    border-style: solid;
+    border-color: red;
+    border-width: 6px;
+}

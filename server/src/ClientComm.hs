@@ -13,6 +13,7 @@ data CMsg = CAlert Text
           | CQueryOk [Text] [Text]
           | CQueryNo [Text]
           | CCheck Text
+          | CCex [Text]
           | CResult Text
 
 instance ToJSON CMsg where
@@ -25,6 +26,8 @@ instance ToJSON CMsg where
       CQueryNo is ->
         object ["queryNo" .= object ["inputs" .= toJSON is]]
       CCheck uri -> object ["check" .= object ["uri" .= toJSON uri]]
+      CCex is -> 
+        object ["cex" .= object ["inputs" .= toJSON is]]
       CResult uri -> object ["result" .= object ["uri" .= toJSON uri]]
 
 sendCMsg :: WS.Connection -> CMsg -> IO ()

@@ -104,11 +104,8 @@ listen conn clientId stateRef = Monad.forever $ do
   case msg of
     "req:AsyncTask" ->      experiment send "AsyncTask"
     "req:CountDownTimer" -> experiment send "CountDownTimer"
+    "req:SQLiteOpenHelper" -> experiment send "SQLiteOpenHelper"
     _ -> putStrLn "Received unhandled request."
-
--- resultsPath :: Text
--- resultsPath = 
---   "/sdcard/Android/data/edu.colorado.plv.droidStar.experiments/files/results"
 
 experiment send name = do
   clearLog
@@ -116,18 +113,6 @@ experiment send name = do
   launchExp name
   followLog send
   send (CAlert "All done.")
-
--- sendResults send name = do 
---   Turtle.shell ("adb pull " <> resultsPath <> " ./") empty
---   let graphPath = fromText "results" <> fromText (name <> "-diagram.gv")
---   putStrLn (Text.unpack (format fp graphPath))
---   graph <- readTextFile graphPath
---   let graphHash = Text.pack . showDigest . sha1 . BL.fromStrict . encodeUtf8 $ graph
---   let imgPath = "res/" <> graphHash <> ".png"
---   shell "mkdir -p res" empty
---   proc "dot" ["-Tpng","-o" <> imgPath,format fp graphPath] empty
---   send $ "res:" <> imgPath
---   putStrLn (Text.unpack imgPath)
 
 followLog :: (CMsg -> IO ()) -> IO ()
 followLog send = logcatDS >>= r
@@ -138,6 +123,7 @@ followLog send = logcatDS >>= r
           case msg of
             DsQueryOk is os -> send (CQueryOk is os) >> more
             DsQueryNo is -> send (CQueryNo is) >> more
+            DsCex is -> send (CCex is) >> more
             DsCheck t -> send (CCheck t) >> more
             DsResult t -> send (CResult t) >> kill
 

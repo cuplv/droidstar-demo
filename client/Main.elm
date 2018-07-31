@@ -35,7 +35,7 @@ type alias Model =
   , connection : Maybe String
   , debugs : List Trace
   , candidates : Int
-  , showCandidate : Maybe (Int,TS)
+  , showCandidate : Maybe (Int,TS,Correctness)
   , resultTS : Maybe TS
   , loc : String
   }
@@ -56,6 +56,7 @@ init l =
     Nothing
     [ Experiment "/static/asdf.png" "CountDownTimer"
     , Experiment "/static/asdf.png" "AsyncTask"
+    , Experiment "/static/asdf.png" "SQLiteOpenHelper"
     ]
     Nothing
     Nothing
@@ -72,6 +73,7 @@ type SMsg = SAlert String
           | SQueryOk (List String) (List String)
           | SQueryNo (List String)
           | SCheck String
+          | SCex (List String)
           | SResult String
 
 decodeSMsg : D.Decoder SMsg
@@ -80,6 +82,7 @@ decodeSMsg =
           , D.field "queryOk" decqok
           , D.field "queryNo" decqno
           , D.field "check" deccheck
+          , D.field "cex" deccex
           , D.field "result" decresult
           ]
 
@@ -99,7 +102,9 @@ deccheck =
 decresult =
   P.decode SResult
     |> P.required "uri" D.string
-  
+deccex =
+  P.decode SCex
+    |> P.required "inputs" (D.list D.string)
 
 wsUrl : String -> String
 wsUrl hostname = "ws://" ++ hostname ++ ":30025"
@@ -119,6 +124,10 @@ update msg model =
             ({ model
                 | dropdown = updatedDropdown
                 , selectedItem = Just exp
+                , debugs = []
+                , candidates = 0
+                , showCandidate = Nothing
+                , resultTS = Nothing
             }
             , WebSocket.send (wsUrl model.loc) ("req:" ++ exp.name))
           _ -> ({ model | dropdown = updatedDropdown }, Cmd.none)
@@ -128,8 +137,12 @@ update msg model =
         ([],[]) -> (model,Cmd.none)
         _ -> ({ model | debugs = model.debugs ++ [(TestOk is os)] }, Cmd.none)
       SQueryNo is -> ({ model | debugs = model.debugs ++ [(TestErr is)] }, Cmd.none)
+      SCex is -> ({ model | debugs = model.debugs ++ [(Cex model.candidates is)],
+                            showCandidate = case model.showCandidate of
+                                              Just (ts,uri,_) -> Just (ts,uri,Bad)
+                                              Nothing -> Nothing }, Cmd.none)
       SCheck uri -> ({ model | debugs = model.debugs ++ [(Candidate (cnd model) uri)],
-                               showCandidate = Just (cnd model,uri),
+                               showCandidate = Just (cnd model,uri,Unsure),
                                candidates = cnd model}, Cmd.none)
       SResult uri -> ({ model | debugs = model.debugs ++ [(Finished (model.candidates) uri)],
                                 resultTS = Just uri,
@@ -140,6 +153,7 @@ cnd model = model.candidates + 1
 
 type Trace = TestOk (List String) (List String)
            | TestErr (List String)
+           | Cex Int (List String)
            | Candidate Int String
            | Finished Int String
 
@@ -175,9 +189,21 @@ renderTrace t = case t of
       [span [] (List.map (\s -> span [class "errin"] [text s]) is)]
   Candidate n _ -> text ("Checking candidate #" ++ toString n ++ "...")
   Finished n _ -> text ("Finished: Candidate #" ++ toString n ++ " is correct.")
+  Cex n is ->
+    span
+      [class "cex"]
+      [ span [] [text ("Counter-example found for #" ++ toString n ++ ":")]
+      , span [] (List.map (\s -> span [class "cexin"] [text s]) is) ]
 
-tsImg : Model -> TS -> Html msg
-tsImg model ts = img [ src (resultsURI model.loc ts) ] []
+type Correctness = Good | Unsure | Bad
+
+tsImg : Model -> TS -> Correctness -> Html msg
+tsImg model ts cor =
+  let cls = case cor of
+              Good -> "good-ts"
+              Unsure -> "unsure-ts"
+              Bad -> "bad-ts"
+  in img [ class cls, src (resultsURI model.loc ts) ] []
 
 view : Model -> Html Msg
 view model =
@@ -200,11 +226,14 @@ view model =
              (List.reverse (model.debugs)))
       ]
     , div [] (case model.showCandidate of
-               Just (num,ts) -> [ h2 [] [text ("Checking candidate #" ++ (toString num) ++ ":")]
-                                , tsImg model ts ]
+               Just (num,ts,Unsure) -> [ h2 [] [text ("Checking candidate #" ++ (toString num) ++ ":")]
+                                       , tsImg model ts Unsure ]
+               Just (num,ts,Bad) -> [ h2 [] [text ("Eliminated candidate #" ++ (toString num) ++ ".  Building next...")]
+                                    , tsImg model ts Bad ]
+               Just (num,ts,Good) -> [tsImg model ts Good]
                Nothing -> [])
     , h1 [] [text "Results"]
     , case model.resultTS of
-        Just ts -> tsImg model ts
+        Just ts -> tsImg model ts Good
         Nothing -> text ""
     ]

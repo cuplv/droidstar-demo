@@ -37,7 +37,7 @@ mkNo :: Text -> EmuMsg
 mkNo t = DsQueryNo (map rep (Text.splitOn "," t))
 
 mkCex :: Text -> EmuMsg
-mkCex t = DsCex (Text.splitOn "," t)
+mkCex t = DsCex (map rep (Text.splitOn "," t))
 
 msgp :: ParsecT Text () IO EmuMsg
 msgp = 
