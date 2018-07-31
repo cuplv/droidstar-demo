@@ -4,7 +4,6 @@
 /docker-server/_server
 /docker-server/_droidstar-debug.apk
 /client/index.html
-/droidstar
 /server/cabal-shell.nix
 /server/results
 /server/res

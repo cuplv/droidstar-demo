@@ -1,0 +1,1 @@
+docker run --rm --privileged -e ANDROID_ARCH="x86" -v /dev/kvm:/dev/kvm 88d0a790ace3
