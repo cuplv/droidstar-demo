@@ -41,7 +41,7 @@ ul.traces > li {
 }
 
 ul.traces {
-    max-height: 15em;
+    max-height: 20em;
     overflow: auto;
     padding-bottom: 1em;
 }

@@ -34,7 +34,8 @@ type alias Model =
   , selectedItem : Maybe Experiment
   , connection : Maybe String
   , debugs : List Trace
-  , showCandidate : Maybe TS
+  , candidates : Int
+  , showCandidate : Maybe (Int,TS)
   , resultTS : Maybe TS
   , loc : String
   }
@@ -59,6 +60,7 @@ init l =
     Nothing
     Nothing
     []
+    0
     Nothing
     Nothing
     l.hostname
@@ -120,25 +122,26 @@ update msg model =
             }
             , WebSocket.send (wsUrl model.loc) ("req:" ++ exp.name))
           _ -> ({ model | dropdown = updatedDropdown }, Cmd.none)
-    -- ServerMsg s ->
-    --   let k = String.left 4 s
-    --       p = String.dropLeft 4 s
-    --   in case k of
-    --     ("dbg:") -> ({ model | debugs = prependBounded 10 p model.debugs }, Cmd.none)
-    --     ("res:") -> ({ model | resultTS = Just p }, Cmd.none)
-    --     _ -> ({ model | connection = Just s }, Cmd.none)
     ServerMsg m -> case m of
-     SAlert t -> ({ model | alert = Just t }, Cmd.none)
-     SQueryOk is os -> ({ model | debugs = model.debugs ++ [(TestOk is os)] }, Cmd.none)
-     SQueryNo is -> ({ model | debugs = model.debugs ++ [(TestErr is)] }, Cmd.none)
-     SCheck uri -> ({ model | debugs = model.debugs ++ [(Candidate uri)] }, Cmd.none)
-     SResult uri -> ({ model | debugs = model.debugs ++ [(Finished uri)], resultTS = Just uri }, Cmd.none)
+      SAlert t -> ({ model | alert = Just t }, Cmd.none)
+      SQueryOk is os -> case (is,os) of
+        ([],[]) -> (model,Cmd.none)
+        _ -> ({ model | debugs = model.debugs ++ [(TestOk is os)] }, Cmd.none)
+      SQueryNo is -> ({ model | debugs = model.debugs ++ [(TestErr is)] }, Cmd.none)
+      SCheck uri -> ({ model | debugs = model.debugs ++ [(Candidate (cnd model) uri)],
+                               showCandidate = Just (cnd model,uri),
+                               candidates = cnd model}, Cmd.none)
+      SResult uri -> ({ model | debugs = model.debugs ++ [(Finished (model.candidates) uri)],
+                                resultTS = Just uri,
+                                showCandidate = Nothing }, Cmd.none)
     BadServerMsg -> (model,Cmd.none)
+
+cnd model = model.candidates + 1
 
 type Trace = TestOk (List String) (List String)
            | TestErr (List String)
-           | Candidate String
-           | Finished String
+           | Candidate Int String
+           | Finished Int String
 
 -- SUBS
 
@@ -170,8 +173,8 @@ renderTrace t = case t of
     span
       [ class "trace" ]
       [span [] (List.map (\s -> span [class "errin"] [text s]) is)]
-  Candidate _ -> text "Candidate"
-  Finished _ -> text "Finished"
+  Candidate n _ -> text ("Checking candidate #" ++ toString n ++ "...")
+  Finished n _ -> text ("Finished: Candidate #" ++ toString n ++ " is correct.")
 
 tsImg : Model -> TS -> Html msg
 tsImg model ts = img [ src (resultsURI model.loc ts) ] []
@@ -196,8 +199,10 @@ view model =
              (\t -> li [] [renderTrace t])
              (List.reverse (model.debugs)))
       ]
-    -- , div [] case model.showCandidate of
-    --            Just ts -> (resultsU
+    , div [] (case model.showCandidate of
+               Just (num,ts) -> [ h2 [] [text ("Checking candidate #" ++ (toString num) ++ ":")]
+                                , tsImg model ts ]
+               Nothing -> [])
     , h1 [] [text "Results"]
     , case model.resultTS of
         Just ts -> tsImg model ts

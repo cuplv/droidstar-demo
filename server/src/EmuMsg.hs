@@ -34,7 +34,7 @@ rep t | t == "delta" = "(CB?)"
       | otherwise = t
 
 mkNo :: Text -> EmuMsg
-mkNo t = DsQueryNo (Text.splitOn "," t)
+mkNo t = DsQueryNo (map rep (Text.splitOn "," t))
 
 mkCex :: Text -> EmuMsg
 mkCex t = DsCex (Text.splitOn "," t)
