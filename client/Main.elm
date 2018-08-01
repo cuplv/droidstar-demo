@@ -48,6 +48,7 @@ type Msg =
   | ServerMsg SMsg
   | NoMsg
   | BadServerMsg
+  | ShowC Int TS
 
 init : Navigation.Location -> (Model, Cmd Msg)
 init l =
@@ -148,6 +149,11 @@ update msg model =
                                 resultTS = Just uri,
                                 showCandidate = Nothing }, Cmd.none)
     BadServerMsg -> (model,Cmd.none)
+    ShowC n uri -> case model.resultTS of
+      Just finalTS ->
+        let status = if finalTS == uri then Good else Bad
+        in ({ model | showCandidate = Just (n,uri,status) }, Cmd.none)
+      Nothing -> (model, Cmd.none)
 
 cnd model = model.candidates + 1
 
@@ -173,8 +179,8 @@ resultsHost = "127.0.0.1"
 resultsURI : String -> String -> String
 resultsURI l f = "http://" ++ l ++ ":30025/" ++ f
 
-renderTrace : Trace -> Html msg
-renderTrace t = case t of
+renderTrace : Bool -> Trace -> Html Msg
+renderTrace finished t = case t of
   TestOk is os ->
     span
       [ class "trace" ]
@@ -187,7 +193,14 @@ renderTrace t = case t of
     span
       [ class "trace" ]
       [span [] (List.map (\s -> span [class "errin"] [text s]) is)]
-  Candidate n _ -> text ("Checking candidate #" ++ toString n ++ "...")
+  Candidate n uri -> case finished of
+    False -> span [class "cand"] [text ("Checking candidate #" ++ toString n ++ "...")]
+    True ->
+      span
+        [class "candf"]
+        [ text "Checking"
+        , button [ onClick (ShowC n uri) ] [ text ("candidate #" ++ toString n) ]
+        , text "..." ]
   Finished n _ -> text ("Finished: Candidate #" ++ toString n ++ " is correct.")
   Cex n is ->
     span
@@ -204,6 +217,11 @@ tsImg model ts cor =
               Unsure -> "unsure-ts"
               Bad -> "bad-ts"
   in img [ class cls, src (resultsURI model.loc ts) ] []
+
+checkFin : Model -> Bool
+checkFin model = case model.resultTS of
+  Just _ -> True
+  Nothing -> False
 
 view : Model -> Html Msg
 view model =
@@ -222,7 +240,7 @@ view model =
       [ ul
           [class "traces"]
           (List.map
-             (\t -> li [] [renderTrace t])
+             (\t -> li [] [renderTrace (checkFin model) t])
              (List.reverse (model.debugs)))
       ]
     , div [] (case model.showCandidate of

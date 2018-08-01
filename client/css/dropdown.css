@@ -78,3 +78,8 @@ img.bad-ts {
     border-color: red;
     border-width: 6px;
 }
+
+.candf > button {
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+}
