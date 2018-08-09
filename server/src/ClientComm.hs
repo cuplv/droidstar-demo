@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ClientComm (CMsg (..), sendCMsg) where
+module ClientComm (CMsg (..), sendCMsg, SReq (..)) where
 
 import Prelude hiding (FilePath)
 
@@ -29,6 +29,14 @@ instance ToJSON CMsg where
       CCex is -> 
         object ["cex" .= object ["inputs" .= toJSON is]]
       CResult uri -> object ["result" .= object ["uri" .= toJSON uri]]
+
+data SReq = SReq Text Text
+
+instance FromJSON SReq where
+  parseJSON = withObject "SReq" $ \v -> do
+    n <- v .: "name"
+    lp <- v .: "lp"
+    return (SReq n lp)
 
 sendCMsg :: WS.Connection -> CMsg -> IO ()
 sendCMsg conn = WS.sendTextData conn . encode

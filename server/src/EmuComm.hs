@@ -3,6 +3,7 @@
 module EmuComm 
   ( module EmuMsg
   , connectAdb
+  , installAdb
   , logcatDS
   , clearLog
   , launchExp
@@ -31,10 +32,12 @@ connectAdb ip = do
              connectAdb ip
      else do putStrLn "Connected to emulator."
              IO.hFlush IO.stdout
-             let apk = (apksDir cfg) <> "droidstar.apk"
-             proc "adb" ["install","-r",format fp apk] empty
-             putStrLn "Installed experiments."
-             IO.hFlush IO.stdout
+
+installAdb :: FilePath -> IO ()
+installAdb apk = do
+  proc "adb" ["install","-r",format fp apk] empty
+  putStrLn "Installed experiment."
+  IO.hFlush IO.stdout
 
 clearLog :: IO ()
 clearLog = shell "adb logcat -c" empty >> return ()

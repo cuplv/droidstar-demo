@@ -29,14 +29,17 @@ import Turtle
 import qualified Control.Foldl as Foldl
 
 import Data.Digest.Pure.SHA (sha1,showDigest)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BL
 
 import qualified Text.Parsec as Ps
 
+import Data.Aeson (decode,FromJSON)
+
 import Config
 import EmuComm
 import ClientComm
-
+import Sbt
 
 main :: IO ()
 main = do 
@@ -97,22 +100,33 @@ disconnectClient :: ClientId -> Concurrent.MVar State -> IO ()
 disconnectClient clientId stateRef = Concurrent.modifyMVar_ stateRef $ \state ->
   return $ withoutClient clientId state
   
+receiveJSON :: (FromJSON a) => WS.Connection -> IO (Maybe a)
+receiveJSON conn = decode <$> WS.receiveData conn
+
 listen :: WS.Connection -> ClientId -> Concurrent.MVar State -> IO ()
 listen conn clientId stateRef = Monad.forever $ do
-  msg <- WS.receiveData conn :: IO Text.Text
+  (Just sreq) <- receiveJSON conn
   let send = sendCMsg conn
-  case msg of
-    "req:AsyncTask" ->      experiment send "AsyncTask"
-    "req:CountDownTimer" -> experiment send "CountDownTimer"
-    "req:SQLiteOpenHelper" -> experiment send "SQLiteOpenHelper"
-    _ -> putStrLn "Received unhandled request."
+  experiment send sreq
 
-experiment send name = do
-  clearLog
-  send (CAlert "Running experiment...")
-  launchExp name
-  followLog send
-  send (CAlert "All done.")
+  -- case msg of
+  --   "req:AsyncTask" ->      experiment send "AsyncTask"
+  --   "req:CountDownTimer" -> experiment send "CountDownTimer"
+  --   "req:SQLiteOpenHelper" -> experiment send "SQLiteOpenHelper"
+  --   _ -> putStrLn "Received unhandled request."
+
+experiment send (SReq name lp) = do
+  res <- genLpApk lp
+  case res of
+    Right f -> do
+      installAdb f
+      clearLog
+      send (CAlert "Running experiment...")
+      launchExp "Custom"
+      followLog send
+      send (CAlert "All done.")
+    Left e -> do
+      send (CAlert "Compile failure.")
 
 followLog :: (CMsg -> IO ()) -> IO ()
 followLog send = logcatDS >>= r
