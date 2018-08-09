@@ -5,8 +5,11 @@ import WebSocket
 import Navigation
 import Json.Decode as D
 import Json.Decode.Pipeline as P
+import Json.Encode exposing (encode,string)
 import Dropdown exposing (Dropdown, Event(ItemSelected))
 import Markdown
+
+import BigContent exposing (..)
 
 main =
   Navigation.program
@@ -18,7 +21,7 @@ main =
     }
 
 type alias Experiment =
-  { imgSrc : String
+  { lpText : String
   , name : String
   }
 
@@ -30,7 +33,7 @@ type alias Model =
   { dropdown : Dropdown
   , alert : Maybe String
   , items : List Experiment
-  , selectedItem : Maybe Experiment
+  , selectedItem : Maybe (Experiment, String)
   , connection : Maybe String
   , debugs : List Trace
   , candidates : Int
@@ -48,6 +51,8 @@ type Msg =
   | NoMsg
   | BadServerMsg
   | ShowC Int TS
+  | UpdateLPText String
+  | ExprRequested
 
 init : Navigation.Location -> (Model, Cmd Msg)
 init l =
@@ -55,7 +60,7 @@ init l =
     Dropdown.init
     Nothing
     [ Experiment "/static/asdf.png" "CountDownTimer"
-    , Experiment "/static/asdf.png" "AsyncTask"
+    , Experiment asyncTaskDef "AsyncTask"
     , Experiment "/static/asdf.png" "SQLiteOpenHelper"
     ]
     Nothing
@@ -123,7 +128,7 @@ update msg model =
           ItemSelected exp ->
             ({ model
                 | dropdown = updatedDropdown
-                , selectedItem = Just exp
+                , selectedItem = Just (exp,exp.lpText)
                 , debugs = []
                 , candidates = 0
                 , showCandidate = Nothing
@@ -131,6 +136,10 @@ update msg model =
             }
             , WebSocket.send (wsUrl model.loc) ("req:" ++ exp.name))
           _ -> ({ model | dropdown = updatedDropdown }, Cmd.none)
+    ExprRequested -> case model.selectedItem of
+      Just (e,t) ->
+        (model, WebSocket.send (wsUrl model.loc) (encode 2 (Json.Encode.object [ ("name", Json.Encode.string e.name), ("lp", string t) ])))
+      Nothing -> (model,Cmd.none)
     ServerMsg m -> case m of
       SAlert t -> ({ model | alert = Just t }, Cmd.none)
       SQueryOk is os -> case (is,os) of
@@ -152,6 +161,9 @@ update msg model =
       Just finalTS ->
         let status = if finalTS == uri then Good else Bad
         in ({ model | showCandidate = Just (n,uri,status) }, Cmd.none)
+      Nothing -> (model, Cmd.none)
+    UpdateLPText t2 -> case model.selectedItem of
+      Just (e,t) -> ({model | selectedItem = Just (e,t2)}, Cmd.none)
       Nothing -> (model, Cmd.none)
 
 cnd model = model.candidates + 1
@@ -222,53 +234,6 @@ checkFin model = case model.resultTS of
   Just _ -> True
   Nothing -> False
 
-inputsDoc = Markdown.toHtml [ class "docs" ] """
-
-Begin by clicking one of the class names below.
-
-"""
-
-learningDoc = Markdown.toHtml [ class "docs" ] """
-
-DroidStar learns by performing **queries**, which are sequences of
-callins interspersed with pauses to listen for callbacks.
-
-These pauses are written in the following logs as <span
-class="okin">(CB?)</span> blocks.  Each pause gets a blue response
-block after the ">>", which either contains a callback or a <span
-class="okout">(none)</span> if none were seen.
-
-Queries are **accepted** if running the callins in sequence does not
-throw an error.  In this case they will appear green and followed by
-(blue) callbacks.  If one of the callins throws an error, the query is
-**rejected** and appears red in the log.
-
-"""
-
-resultsDoc = Markdown.toHtml [ class "docs" ] """
-
-The result of a learning session is a **callback typestate**,
-presented below as a graph, which describes a class's stateful behavior.
-
-A class object begins in state 0, and allows only those callins which
-have arrows leaving state 0 to be called.  Upon having an accepted
-callin invoked, the object changes to the state indicated by the
-callin's arrow.
-
-Somes states have a callback enabled, marked by an arrow labeled with
-`cb_something`.  This indicates that if you leave the object in this
-state, you will observe that callback.
-
-Callback typestates are built using query results.  Try looking back
-through the query log that produced this result, and comparing queries
-to the graph.  For <span class="okin">accepted</span> queries, you
-will be able to create a path from the callins and callbacks in the
-graph (where <span class="okout">(none)</span> makes no move).  For
-<span class="errin">rejected</span> queries, you will find that one
-callin in the sequence is applied in a state where it is not enabled
-(there is no arrow labeled with it leaving the state).
-
-"""
 
 view : Model -> Html Msg
 view model =
@@ -280,9 +245,17 @@ view model =
     , Html.map ExpSelected <|
         Dropdown.view
           model.items
-          model.selectedItem
+          (case model.selectedItem of
+             Just (e,t) -> Just e
+             Nothing -> Nothing)
           .name
           model.dropdown
+    , case model.selectedItem of
+        Just (e,t) -> textarea [ spellcheck False, onInput UpdateLPText] [text t]
+        Nothing -> text "..."
+    , case model.selectedItem of
+        Just _ -> button [ onInput (\_ -> ExprRequested) ] [ text "Learn" ]
+        Nothing -> text "..."
     , h1 [] [text "Learning"]
     , case model.selectedItem of
         Just _ -> learningDoc
