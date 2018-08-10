@@ -34,7 +34,7 @@ import qualified Data.ByteString.Lazy as BL
 
 import qualified Text.Parsec as Ps
 
-import Data.Aeson (decode,FromJSON)
+import Data.Aeson (eitherDecode,FromJSON)
 
 import Config
 import EmuComm
@@ -44,6 +44,7 @@ import Sbt
 main :: IO ()
 main = do 
   putStrLn "Starting..."
+  export "HOME" "/home/octal/droidstar-demo"
   IO.hFlush IO.stdout
   ip <- case emuAddr cfg of
           Just ip -> return $ Right [ip]
@@ -100,12 +101,16 @@ disconnectClient :: ClientId -> Concurrent.MVar State -> IO ()
 disconnectClient clientId stateRef = Concurrent.modifyMVar_ stateRef $ \state ->
   return $ withoutClient clientId state
   
-receiveJSON :: (FromJSON a) => WS.Connection -> IO (Maybe a)
-receiveJSON conn = decode <$> WS.receiveData conn
+receiveJSON :: (FromJSON a) => WS.Connection -> IO a
+receiveJSON conn = do 
+  r <- eitherDecode <$> WS.receiveData conn
+  case r of
+    Right a -> return a
+    Left s -> die (Text.pack s)
 
 listen :: WS.Connection -> ClientId -> Concurrent.MVar State -> IO ()
 listen conn clientId stateRef = Monad.forever $ do
-  (Just sreq) <- receiveJSON conn
+  sreq <- receiveJSON conn
   let send = sendCMsg conn
   experiment send sreq
 
@@ -115,18 +120,24 @@ listen conn clientId stateRef = Monad.forever $ do
   --   "req:SQLiteOpenHelper" -> experiment send "SQLiteOpenHelper"
   --   _ -> putStrLn "Received unhandled request."
 
+dbgMsg send t = do
+  send (CAlert t)
+  putStrLn (Text.unpack t)
+  IO.hFlush IO.stdout
+
 experiment send (SReq name lp) = do
+  dbgMsg send "Compiling experiment."
   res <- genLpApk lp
   case res of
     Right f -> do
       installAdb f
       clearLog
-      send (CAlert "Running experiment...")
+      dbgMsg send "Running experiment..."
       launchExp "Custom"
       followLog send
-      send (CAlert "All done.")
+      dbgMsg send "All done."
     Left e -> do
-      send (CAlert "Compile failure.")
+      dbgMsg send "Compile failure."
 
 followLog :: (CMsg -> IO ()) -> IO ()
 followLog send = logcatDS >>= r

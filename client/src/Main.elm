@@ -134,7 +134,8 @@ update msg model =
                 , showCandidate = Nothing
                 , resultTS = Nothing
             }
-            , WebSocket.send (wsUrl model.loc) ("req:" ++ exp.name))
+            -- , WebSocket.send (wsUrl model.loc) ("req:" ++ exp.name))
+            , Cmd.none)
           _ -> ({ model | dropdown = updatedDropdown }, Cmd.none)
     ExprRequested -> case model.selectedItem of
       Just (e,t) ->
@@ -170,8 +171,8 @@ cnd model = model.candidates + 1
 
 type Trace = TestOk (List String) (List String)
            | TestErr (List String)
-           | Cex Int (List String)
            | Candidate Int String
+           | Cex Int (List String)
            | Finished Int String
 
 -- SUBS
