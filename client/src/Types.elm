@@ -58,13 +58,6 @@ compiling m = case m.selectedItem of
   Just e -> { m | selectedItem = Just { e | status = Compiling } }
   _ -> m
 
--- updateLP : String -> Model -> Model
--- updateLP s model = case model.selectedItem of
---   Just e -> case e.status of
---     Editing -> { model | selectedItem = Just { e | lp = editLP s e.lp } }
---     _ -> model
---   _ -> model
-
 skip : Model -> (Model, Cmd Msg)
 skip m = (m,Cmd.none)
 
@@ -122,6 +115,7 @@ type ServerMsg =
     SAlert String
   | SCompiled
   | STrace STrace
+  | SHello ServerMode
 
 type STrace = 
     SQueryOk (List String) (List String)
@@ -130,7 +124,9 @@ type STrace =
   | SCex (List String)
   | SResult String
 
+type ServerMode = Static | Custom
+
 type alias NetConf =
   { loc : String
-  , connection : Maybe String
+  , connection : Maybe ServerMode
   }

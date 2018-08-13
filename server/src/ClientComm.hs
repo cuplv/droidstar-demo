@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ClientComm (CMsg (..), sendCMsg, SReq (..)) where
+module ClientComm (CMsg (..), sendCMsg, SReq (..), ServerMode (..)) where
 
 import Prelude hiding (FilePath)
 
@@ -16,6 +16,7 @@ data CMsg = CAlert Text
           | CCex [Text]
           | CResult Text
           | CCompiled
+          | CHello ServerMode
 
 instance ToJSON CMsg where
   toJSON m = 
@@ -31,6 +32,11 @@ instance ToJSON CMsg where
         object ["cex" .= object ["inputs" .= toJSON is]]
       CResult uri -> object ["result" .= object ["uri" .= toJSON uri]]
       CCompiled -> object ["compiled" .= toJSON ("compiled" :: Text)]
+      CHello m -> object ["hello" .= toJSON (case m of
+                                               Static -> "static" :: Text
+                                               Custom -> "custom" :: Text)]
+
+data ServerMode = Static | Custom
 
 data SReq = SReq Text Text
 

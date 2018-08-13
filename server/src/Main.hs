@@ -46,6 +46,7 @@ main = do
   putStrLn "Starting..."
   export "HOME" "/home/octal/droidstar-demo"
   IO.hFlush IO.stdout
+  let mode = Static
   ip <- case emuAddr cfg of
           Just ip -> return $ Right [ip]
           Nothing -> getIP
@@ -57,7 +58,7 @@ main = do
          state <- Concurrent.newMVar []
          Warp.run 30025 $ WS.websocketsOr
            WS.defaultConnectionOptions
-           (wsApp state)
+           (wsApp mode state)
            httpApp
     _ -> die "No ip"
 
@@ -89,10 +90,10 @@ type State = [Client]
 nextId :: State -> ClientId
 nextId = Maybe.maybe 0 ((+) 1) . Safe.maximumMay . List.map fst
 
-connectClient :: WS.Connection -> Concurrent.MVar State -> IO ClientId
-connectClient conn stateRef = Concurrent.modifyMVar stateRef $ \state -> do
+connectClient :: ServerMode -> WS.Connection -> Concurrent.MVar State -> IO ClientId
+connectClient mode conn stateRef = Concurrent.modifyMVar stateRef $ \state -> do
   let clientId = nextId state
-  -- WS.sendTextData conn ("Asdf2"::Text.Text)
+  sendCMsg conn (CHello mode)
   return ((clientId, conn) : state, clientId)
   
 withoutClient :: ClientId -> State -> State
@@ -109,8 +110,8 @@ receiveJSON conn = do
     Right a -> return a
     Left s -> die (Text.pack s)
 
-listen :: WS.Connection -> ClientId -> Concurrent.MVar State -> IO ()
-listen conn clientId stateRef = Monad.forever $ do
+listen :: ServerMode -> WS.Connection -> ClientId -> Concurrent.MVar State -> IO ()
+listen mode conn clientId stateRef = Monad.forever $ do
   sreq <- receiveJSON conn
   let send = sendCMsg conn
   experiment send sreq
@@ -161,11 +162,11 @@ followLog send = logcatDS >>= r
             DsCheck t -> send (CCheck t) >> more
             DsResult t -> send (CResult t) >> kill
 
-wsApp :: Concurrent.MVar State -> WS.ServerApp
-wsApp stateRef pendingConn = do
+wsApp :: ServerMode -> Concurrent.MVar State -> WS.ServerApp
+wsApp mode stateRef pendingConn = do
   conn <- WS.acceptRequest pendingConn
-  clientId <- connectClient conn stateRef
+  clientId <- connectClient mode conn stateRef
   WS.forkPingThread conn 30
   Exception.finally
-    (listen conn clientId stateRef)
+    (listen mode conn clientId stateRef)
     (disconnectClient clientId stateRef)

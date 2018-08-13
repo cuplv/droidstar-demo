@@ -10,18 +10,20 @@ import Html.Events exposing (..)
 import Dropdown exposing (Dropdown, Event(ItemSelected))
 
 view : Model -> Html Msg
-view model =
-  div [] <|
-    [ styleHeader
-    , alertSection model.alertLog
-    , inputSection model
-    ] ++
-    (case model.selectedItem of
-       Just e ->
-         [ learnSection model.netConf e
-         , resultsSection model.netConf e
-         ]
-       Nothing -> [])
+view model = case model.netConf.connection of
+  Just mode ->
+    div [] <|
+      [ styleHeader
+      , alertSection model.alertLog
+      , inputSection model mode
+      ] ++
+      (case model.selectedItem of
+         Just e ->
+           [ learnSection model.netConf e
+           , resultsSection model.netConf e
+           ]
+         Nothing -> [])
+  Nothing -> div [] [text "Awaiting server connection..."]
 
 alertSection : List Alert -> Html msg
 alertSection ls = case ls of
@@ -34,18 +36,22 @@ styleHeader = node "link" [ rel "stylesheet", href "/css/dropdown.css" ] []
 lp2Text : LP -> Html msg
 lp2Text lp = text lp.lpText
 
-lpInput : Exp -> Html Msg
-lpInput e = case e.status of
-  Editing -> div []
+lpInput : Exp -> ServerMode -> Html Msg
+lpInput e mode = case (e.status,mode) of
+  (Editing,Custom) -> div []
     [ div [] [textarea [spellcheck False, onInput UpdateLP] [lp2Text e.lp]]
+    , div [] [button [onClick BeginLearn] [text "Learn"]]
+    ]
+  (Editing,Static) -> div []
+    [ textarea [spellcheck False, readonly True] [lp2Text e.lp]
     , div [] [button [onClick BeginLearn] [text "Learn"]]
     ]
   _ -> div []
     [ textarea [spellcheck False, readonly True] [lp2Text e.lp]
     ]
 
-inputSection : Model -> Html Msg
-inputSection model = div [] <|
+inputSection : Model -> ServerMode -> Html Msg
+inputSection model mode = div [] <|
   [ h1 [] [text "Inputs"]
   , Html.map ExpSelected <|
       Dropdown.view
@@ -57,7 +63,7 @@ inputSection model = div [] <|
         model.dropdown
   ] ++
   (case model.selectedItem of
-     Just e -> [lpInput e]
+     Just e -> [lpInput e mode]
      Nothing -> [])
 
 
@@ -116,6 +122,10 @@ showTS nc (ShowTS ts cor) =
 
 learnSection : NetConf -> Exp -> Html Msg
 learnSection nc e = case e.status of
+
+  Compiling -> div [] <|
+    [ h1 [] [text "Learning"]
+    , div [] [text "Compiling custom LearningPurpose..."] ]
 
   Running ls -> div [] <|
     [ h1 [] [text "Learning"]

@@ -56,7 +56,10 @@ update msg model =
           _ -> ({ model | dropdown = updatedDropdown }, Cmd.none)
 
     ServerMsg smsg -> case smsg of
-      SAlert _ -> skip
+      SHello m ->
+        ({ model | netConf =
+             { loc = model.netConf.loc, connection = Just m } }, Cmd.none)
+      SAlert s -> ({ model | alertLog = s :: model.alertLog }, Cmd.none)
       SCompiled -> onExp model (\e -> case e.status of
         Compiling -> ({ e | status = Running [] }, Cmd.none)
         _ -> (e, Cmd.none))

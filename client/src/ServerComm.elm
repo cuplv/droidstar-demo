@@ -26,6 +26,7 @@ decodeSMsg =
           , D.field "cex" deccex
           , D.field "result" decresult
           , D.field "compiled" deccompiled
+          , decmode
           ]
 
 decSAlert =
@@ -50,6 +51,15 @@ deccex =
 deccompiled =
   P.decode (\_ -> SCompiled)
     |> P.hardcoded "asdf"
+decmode = 
+  let toDecoder : String -> D.Decoder ServerMsg
+      toDecoder s = case s of
+        "static" -> D.succeed (SHello Static)
+        "custom" -> D.succeed (SHello Custom)
+        _ -> D.fail "Not a valid server mode."
+  in P.decode toDecoder
+    |> P.required "hello" D.string
+    |> P.resolve
 
 wsUrl : String -> String
 wsUrl hostname = "ws://" ++ hostname ++ ":" ++ toString serverPort
