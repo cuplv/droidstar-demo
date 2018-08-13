@@ -27,8 +27,12 @@ decodeSMsg =
           , D.field "result" decresult
           , D.field "compiled" deccompiled
           , decmode
+          , decCError
           ]
 
+decCError =
+  P.decode SCError
+    |> P.required "compileError" D.string
 decSAlert =
   P.decode SAlert
     |> P.required "message" D.string

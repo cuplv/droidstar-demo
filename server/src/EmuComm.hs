@@ -5,6 +5,9 @@ module EmuComm
   , connectAdb
   , installAdb
   , apkPath
+  , droidstarPath
+  , droidstarCustomPath
+  , refreshCustom
   , logcatDS
   , clearLog
   , launchExp
@@ -20,7 +23,7 @@ import qualified System.IO as IO
 import qualified System.Process as Proc
 import qualified Control.Concurrent as Concurrent
 
-import Config
+-- import Config
 import EmuMsg
 
 connectAdb :: String -> IO ()
@@ -42,6 +45,19 @@ installAdb apk = do
 
 apkPath :: FilePath
 apkPath = fromText "driver-app/target/android/output/droidstar-debug.apk"
+
+droidstarPath = fromText "droidstar"
+
+droidstarCustomPath = fromText "droidstar-custom"
+
+refreshCustom :: IO ()
+refreshCustom = do
+  h <- home
+  t <- testdir (h <> droidstarCustomPath)
+  if t
+     then rmtree (h <> droidstarCustomPath)
+     else return ()
+  cptree (h <> droidstarPath) (h <> droidstarCustomPath)
 
 clearLog :: IO ()
 clearLog = shell "adb logcat -c" empty >> return ()

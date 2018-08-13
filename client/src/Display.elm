@@ -38,11 +38,11 @@ lp2Text lp = text lp.lpText
 
 lpInput : Exp -> ServerMode -> Html Msg
 lpInput e mode = case (e.status,mode) of
-  (Editing,Custom) -> div []
+  (Editing _,Custom) -> div []
     [ div [] [textarea [spellcheck False, onInput UpdateLP] [lp2Text e.lp]]
     , div [] [button [onClick BeginLearn] [text "Learn"]]
     ]
-  (Editing,Static) -> div []
+  (Editing _,Static) -> div []
     [ textarea [spellcheck False, readonly True] [lp2Text e.lp]
     , div [] [button [onClick BeginLearn] [text "Learn"]]
     ]
@@ -123,9 +123,16 @@ showTS nc (ShowTS ts cor) =
 learnSection : NetConf -> Exp -> Html Msg
 learnSection nc e = case e.status of
 
+  Editing (Just s) -> div [] <|
+    [ h1 [] [text "Learning"]
+    , div [] [text "Compiler error:"]
+    , div [] [textarea [spellcheck False, readonly True] [text s]]
+    ]
+
   Compiling -> div [] <|
     [ h1 [] [text "Learning"]
-    , div [] [text "Compiling custom LearningPurpose..."] ]
+    , div [] [text "Compiling custom LearningPurpose..."]
+    ]
 
   Running ls -> div [] <|
     [ h1 [] [text "Learning"]

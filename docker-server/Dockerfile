@@ -21,4 +21,4 @@ RUN nix-env -f exprs.nix -iA droidstar-demo-server
 RUN git clone https://github.com/cuplv/droidstar
 RUN cd droidstar && git checkout demo-config && sbt driverApp/android:package
 
-CMD ["droidstar-demo-server"]
+CMD ["droidstar-demo-server","--enable-custom","--init-delay","120"]

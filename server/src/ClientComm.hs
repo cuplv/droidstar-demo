@@ -17,6 +17,7 @@ data CMsg = CAlert Text
           | CResult Text
           | CCompiled
           | CHello ServerMode
+          | CCompileError Text
 
 instance ToJSON CMsg where
   toJSON m = 
@@ -33,10 +34,11 @@ instance ToJSON CMsg where
       CResult uri -> object ["result" .= object ["uri" .= toJSON uri]]
       CCompiled -> object ["compiled" .= toJSON ("compiled" :: Text)]
       CHello m -> object ["hello" .= toJSON (case m of
-                                               Static -> "static" :: Text
-                                               Custom -> "custom" :: Text)]
+                                               StaticMode -> "static" :: Text
+                                               CustomMode -> "custom" :: Text)]
+      CCompileError t -> object ["compileError" .= toJSON t]
 
-data ServerMode = Static | Custom
+data ServerMode = StaticMode | CustomMode
 
 data SReq = SReq Text Text
 

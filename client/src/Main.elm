@@ -28,6 +28,8 @@ init l =
      Dropdown.init
      []
      [ { name = "AsyncTask", lpText = asyncTaskDef }
+     , { name = "CountDownTimer", lpText = "TODO...\n" }
+     , { name = "SQLiteOpenHelper", lpText = "TODO...\n" }
      ]
      Nothing
      { loc = l.hostname, connection = Nothing }
@@ -49,7 +51,7 @@ update msg model =
           ItemSelected exp ->
             ({ model
                 | dropdown = updatedDropdown
-                , selectedItem = Just { lp = exp, status = Editing }
+                , selectedItem = Just { lp = exp, status = Editing Nothing }
                 , alertLog = []
             }
             , Cmd.none)
@@ -62,6 +64,9 @@ update msg model =
       SAlert s -> ({ model | alertLog = s :: model.alertLog }, Cmd.none)
       SCompiled -> onExp model (\e -> case e.status of
         Compiling -> ({ e | status = Running [] }, Cmd.none)
+        _ -> (e, Cmd.none))
+      SCError s -> onExp model (\e -> case e.status of
+        Compiling -> ({ e | status = Editing (Just s) }, Cmd.none)
         _ -> (e, Cmd.none))
       STrace t -> case t of
         SQueryOk is os -> case (is,os) of
@@ -86,9 +91,11 @@ update msg model =
          then (Just (ShowTS ts Good), Cmd.none)
          else (Just (ShowTS ts Bad), Cmd.none))
 
-    UpdateLP s -> onExpEdit model (\lp -> (updateLP s lp, Cmd.none))
+    UpdateLP s -> onExpEdit model (\(mce,lp) -> (updateLP mce s lp, Cmd.none))
 
-    BeginLearn -> onExpEdit model (\lp -> 
-      ( { lp = lp, status = Compiling }
+    BeginLearn -> onExpEdit model (\(_,lp) -> 
+      ( { lp = lp, status = (case model.netConf.connection of
+                               Just Static -> Running []
+                               _ -> Compiling) }
       , serverReq model.netConf lp
       ))

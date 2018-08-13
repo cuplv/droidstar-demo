@@ -36,25 +36,29 @@ import qualified Text.Parsec as Ps
 
 import Data.Aeson (eitherDecode,FromJSON)
 
-import Config
 import EmuComm
 import ClientComm
 import Sbt
+import CLI
 
 main :: IO ()
 main = do 
-  putStrLn "Starting..."
-  export "HOME" "/home/octal/droidstar-demo"
-  IO.hFlush IO.stdout
-  let mode = Static
-  ip <- case emuAddr cfg of
-          Just ip -> return $ Right [ip]
+  (Conf mode mhome maddr mdelay) <- getConf
+  case mhome of
+    Just h -> export "HOME" h
+    Nothing -> return ()
+  ip <- case maddr of
+          Just ip -> return $ Right [Text.unpack ip]
           Nothing -> getIP
+  case mode of
+    StaticMode -> putStrLn "Running droidstar-demo-server \
+                           \in static mode."
+    CustomMode -> putStrLn "Running droidstar-demo-server \
+                           \with custom experiments enabled."
   case ip of
     Right [ipaddr] -> 
-      do Concurrent.threadDelay (1000 * 1000 * (initDelay cfg))
+      do Concurrent.threadDelay (1000 * 1000 * mdelay)
          connectAdb ipaddr
-         installAdb (fromText "../droidstar" <> apkPath)
          state <- Concurrent.newMVar []
          Warp.run 30025 $ WS.websocketsOr
            WS.defaultConnectionOptions
@@ -112,42 +116,43 @@ receiveJSON conn = do
 
 listen :: ServerMode -> WS.Connection -> ClientId -> Concurrent.MVar State -> IO ()
 listen mode conn clientId stateRef = Monad.forever $ do
-  sreq <- receiveJSON conn
+  (SReq name lp) <- receiveJSON conn
   let send = sendCMsg conn
-  experiment send sreq
-
-  -- case msg of
-  --   "req:AsyncTask" ->      experiment send "AsyncTask"
-  --   "req:CountDownTimer" -> experiment send "CountDownTimer"
-  --   "req:SQLiteOpenHelper" -> experiment send "SQLiteOpenHelper"
-  --   _ -> putStrLn "Received unhandled request."
+  case mode of
+    StaticMode -> if or (map (== name)
+                             ["AsyncTask"
+                             ,"CountDownTimer"
+                             ,"SQLiteOpenHelper"])
+                     then experiment send (SReq name lp)
+                     else die $ "Class " <> name <> " not supported."
+    CustomMode -> experimentCustom send (SReq name lp)
 
 dbgMsg send t = do
   send (CAlert t)
   putStrLn (Text.unpack t)
   IO.hFlush IO.stdout
 
-experiment send (SReq name lp) = do
-  dbgMsg send "Compiling experiment."
+experiment send (SReq name _) = do
+  h <- home
+  installAdb (h <> fromText "droidstar" <> apkPath)
+  runE name send
 
-  Concurrent.threadDelay (1000 * 1000 * 1)
-  send CCompiled
+experimentCustom send (SReq name lp) = do
+  refreshCustom
+  res <- genLpApk name lp
+  case res of
+    Right f -> do
+      installAdb f
+      send CCompiled
+      runE name send
+    Left e -> do
+      send $ CCompileError e
+
+runE name send = do
   clearLog
-  launchExp "SQLiteOpenHelper"
+  launchExp name
   followLog send
   dbgMsg send "All done."
-
-  -- res <- genLpApk lp
-  -- case res of
-  --   Right f -> do
-  --     installAdb f
-  --     clearLog
-  --     dbgMsg send "Running experiment..."
-  --     launchExp "Custom"
-  --     followLog send
-  --     dbgMsg send "All done."
-  --   Left e -> do
-  --     dbgMsg send "Compile failure."
 
 followLog :: (CMsg -> IO ()) -> IO ()
 followLog send = logcatDS >>= r

@@ -39,8 +39,10 @@ type alias Exp =
   , status : ExpStatus
   }
 
+type alias CompileError = String
+
 type ExpStatus = 
-    Editing
+    Editing (Maybe CompileError)
   | Compiling
   | Running (List LearnTrace)
   | Finished (List LearnTrace) (Maybe ShowTS)
@@ -81,9 +83,9 @@ onExpRun m f = onExp m (\e -> case e.status of
 addTrace : Model -> LearnTrace -> (Model, Cmd Msg)
 addTrace m t = onExpRun m (\ts -> (Running (ts ++ [t]), Cmd.none))
 
-onExpEdit : Model -> (LP -> (Exp, Cmd Msg)) -> (Model, Cmd Msg)
+onExpEdit : Model -> ((Maybe CompileError,LP) -> (Exp, Cmd Msg)) -> (Model, Cmd Msg)
 onExpEdit m f = onExp m (\e -> case e.status of
-  Editing -> f e.lp
+  Editing ce -> f (ce,e.lp)
   _ -> (e,Cmd.none))
 
 onExpFin : Model
@@ -94,12 +96,12 @@ onExpFin m f = onExp m (\e -> case e.status of
     (msts2,c) -> ({ e | status = Finished ls msts2 }, c)
   _ -> (e,Cmd.none))
 
-updateLP : String -> LP -> Exp
-updateLP s lp =
+updateLP : Maybe CompileError -> String -> LP -> Exp
+updateLP mce s lp =
   { lp = { lpText = s
          , name = lp.name
          }
-  , status = Editing
+  , status = Editing mce
   }
 
 type Msg =
@@ -116,6 +118,7 @@ type ServerMsg =
   | SCompiled
   | STrace STrace
   | SHello ServerMode
+  | SCError CompileError
 
 type STrace = 
     SQueryOk (List String) (List String)
