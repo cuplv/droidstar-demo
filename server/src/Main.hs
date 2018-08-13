@@ -53,6 +53,7 @@ main = do
     Right [ipaddr] -> 
       do Concurrent.threadDelay (1000 * 1000 * (initDelay cfg))
          connectAdb ipaddr
+         installAdb (fromText "../droidstar" <> apkPath)
          state <- Concurrent.newMVar []
          Warp.run 30025 $ WS.websocketsOr
            WS.defaultConnectionOptions
@@ -91,7 +92,7 @@ nextId = Maybe.maybe 0 ((+) 1) . Safe.maximumMay . List.map fst
 connectClient :: WS.Connection -> Concurrent.MVar State -> IO ClientId
 connectClient conn stateRef = Concurrent.modifyMVar stateRef $ \state -> do
   let clientId = nextId state
-  WS.sendTextData conn ("Asdf2"::Text.Text)
+  -- WS.sendTextData conn ("Asdf2"::Text.Text)
   return ((clientId, conn) : state, clientId)
   
 withoutClient :: ClientId -> State -> State
@@ -127,17 +128,25 @@ dbgMsg send t = do
 
 experiment send (SReq name lp) = do
   dbgMsg send "Compiling experiment."
-  res <- genLpApk lp
-  case res of
-    Right f -> do
-      installAdb f
-      clearLog
-      dbgMsg send "Running experiment..."
-      launchExp "Custom"
-      followLog send
-      dbgMsg send "All done."
-    Left e -> do
-      dbgMsg send "Compile failure."
+
+  Concurrent.threadDelay (1000 * 1000 * 1)
+  send CCompiled
+  clearLog
+  launchExp "SQLiteOpenHelper"
+  followLog send
+  dbgMsg send "All done."
+
+  -- res <- genLpApk lp
+  -- case res of
+  --   Right f -> do
+  --     installAdb f
+  --     clearLog
+  --     dbgMsg send "Running experiment..."
+  --     launchExp "Custom"
+  --     followLog send
+  --     dbgMsg send "All done."
+  --   Left e -> do
+  --     dbgMsg send "Compile failure."
 
 followLog :: (CMsg -> IO ()) -> IO ()
 followLog send = logcatDS >>= r

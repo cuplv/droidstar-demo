@@ -15,6 +15,7 @@ data CMsg = CAlert Text
           | CCheck Text
           | CCex [Text]
           | CResult Text
+          | CCompiled
 
 instance ToJSON CMsg where
   toJSON m = 
@@ -29,6 +30,7 @@ instance ToJSON CMsg where
       CCex is -> 
         object ["cex" .= object ["inputs" .= toJSON is]]
       CResult uri -> object ["result" .= object ["uri" .= toJSON uri]]
+      CCompiled -> object ["compiled" .= toJSON ("compiled" :: Text)]
 
 data SReq = SReq Text Text
 

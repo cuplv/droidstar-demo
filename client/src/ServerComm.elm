@@ -25,6 +25,7 @@ decodeSMsg =
           , D.field "check" deccheck
           , D.field "cex" deccex
           , D.field "result" decresult
+          , D.field "compiled" deccompiled
           ]
 
 decSAlert =
@@ -46,13 +47,16 @@ decresult =
 deccex =
   P.decode (STrace << SCex)
     |> P.required "inputs" (D.list D.string)
+deccompiled =
+  P.decode (\_ -> SCompiled)
+    |> P.hardcoded "asdf"
 
 wsUrl : String -> String
 wsUrl hostname = "ws://" ++ hostname ++ ":" ++ toString serverPort
 
 tryDecServerMsg s = case D.decodeString decodeSMsg s of
   Ok m -> ServerMsg m
-  Err _ -> BadServerMsg
+  Err _ -> BadServerMsg s
 
 subscriptions : Model -> Sub Msg
 subscriptions model = WebSocket.listen (wsUrl model.netConf.loc) tryDecServerMsg

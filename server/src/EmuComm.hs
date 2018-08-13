@@ -4,6 +4,7 @@ module EmuComm
   ( module EmuMsg
   , connectAdb
   , installAdb
+  , apkPath
   , logcatDS
   , clearLog
   , launchExp
@@ -38,6 +39,9 @@ installAdb apk = do
   proc "adb" ["install","-r",format fp apk] empty
   putStrLn "Installed experiment."
   IO.hFlush IO.stdout
+
+apkPath :: FilePath
+apkPath = fromText "driver-app/target/android/output/droidstar-debug.apk"
 
 clearLog :: IO ()
 clearLog = shell "adb logcat -c" empty >> return ()

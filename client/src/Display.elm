@@ -13,6 +13,7 @@ view : Model -> Html Msg
 view model =
   div [] <|
     [ styleHeader
+    , alertSection model.alertLog
     , inputSection model
     ] ++
     (case model.selectedItem of
@@ -21,6 +22,11 @@ view model =
          , resultsSection model.netConf e
          ]
        Nothing -> [])
+
+alertSection : List Alert -> Html msg
+alertSection ls = case ls of
+  [] -> div [] []
+  a::ls -> div [] [text a]
 
 styleHeader : Html msg
 styleHeader = node "link" [ rel "stylesheet", href "/css/dropdown.css" ] []

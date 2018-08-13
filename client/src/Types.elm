@@ -79,9 +79,26 @@ onExp m f = case m.selectedItem of
     (e,c) -> ({m | selectedItem = Just e}, c)
   Nothing -> skip m
 
+onExpRun : Model -> (List LearnTrace -> (ExpStatus, Cmd Msg)) -> (Model, Cmd Msg)
+onExpRun m f = onExp m (\e -> case e.status of
+  Running ts -> case f ts of
+    (es,c) -> ({ e | status = es }, c)
+  _ -> (e,Cmd.none))
+
+addTrace : Model -> LearnTrace -> (Model, Cmd Msg)
+addTrace m t = onExpRun m (\ts -> (Running (ts ++ [t]), Cmd.none))
+
 onExpEdit : Model -> (LP -> (Exp, Cmd Msg)) -> (Model, Cmd Msg)
 onExpEdit m f = onExp m (\e -> case e.status of
   Editing -> f e.lp
+  _ -> (e,Cmd.none))
+
+onExpFin : Model
+         -> ((List LearnTrace, Maybe ShowTS) -> (Maybe ShowTS, Cmd Msg))
+         -> (Model, Cmd Msg)
+onExpFin m f = onExp m (\e -> case e.status of
+  Finished ls msts -> case f (ls,msts) of
+    (msts2,c) -> ({ e | status = Finished ls msts2 }, c)
   _ -> (e,Cmd.none))
 
 updateLP : String -> LP -> Exp
@@ -96,13 +113,14 @@ type Msg =
     ExpSelected (Dropdown.Msg LP)
   | ServerMsg ServerMsg
   | NoMsg
-  | BadServerMsg
+  | BadServerMsg String
   | ReviewCandidate Int TS
   | UpdateLP String
   | BeginLearn
 
 type ServerMsg =
     SAlert String
+  | SCompiled
   | STrace STrace
 
 type STrace = 
