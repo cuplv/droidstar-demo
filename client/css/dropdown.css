@@ -83,3 +83,24 @@ img.bad-ts {
     margin-left: 0.5em;
     margin-right: 0.5em;
 }
+
+.compiling {
+    background-color: PaleGoldenRod;
+}
+
+.compileFailed {
+    background-color: LightPink;
+}
+
+.compileSucceeded {
+    background-color: LightGreen;
+}
+
+textarea {
+    min-width: 60em;
+    min-height: 40em;
+}
+
+.loadingicon {
+    width: 130px;
+}

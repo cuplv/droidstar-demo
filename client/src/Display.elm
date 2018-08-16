@@ -14,7 +14,7 @@ view model = case model.netConf.connection of
   Just mode ->
     div [] <|
       [ styleHeader
-      , alertSection model.alertLog
+      -- , alertSection model.alertLog
       , inputSection model mode
       ] ++
       (case model.selectedItem of
@@ -38,13 +38,25 @@ lp2Text lp = text lp.lpText
 
 lpInput : Exp -> ServerMode -> Html Msg
 lpInput e mode = case (e.status,mode) of
-  (Editing _,Custom) -> div []
+  (Editing Nothing,Custom) -> div []
     [ div [] [textarea [spellcheck False, onInput UpdateLP] [lp2Text e.lp]]
+    , div [] [button [onClick BeginLearn] [text "Learn"]]
+    ]
+  (Editing (Just _),Custom) -> div []
+    [ div [] [textarea
+                [spellcheck False, onInput UpdateLP, class "compileFailed"]
+                [lp2Text e.lp]]
     , div [] [button [onClick BeginLearn] [text "Learn"]]
     ]
   (Editing _,Static) -> div []
     [ textarea [spellcheck False, readonly True] [lp2Text e.lp]
     , div [] [button [onClick BeginLearn] [text "Learn"]]
+    ]
+  (Compiling, Custom) -> div []
+    [ textarea [spellcheck False, readonly True, class "compiling"] [lp2Text e.lp]
+    ]
+  (_, Custom) -> div []
+    [ textarea [spellcheck False, readonly True, class "compileSucceeded"] [lp2Text e.lp]
     ]
   _ -> div []
     [ textarea [spellcheck False, readonly True] [lp2Text e.lp]
@@ -132,6 +144,7 @@ learnSection nc e = case e.status of
   Compiling -> div [] <|
     [ h1 [] [text "Learning"]
     , div [] [text "Compiling custom LearningPurpose..."]
+    , img [ class "loadingicon", src "/static/triangles.gif" ] []
     ]
 
   Running ls -> div [] <|
