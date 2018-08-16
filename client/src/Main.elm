@@ -29,7 +29,7 @@ init l =
      []
      [ { name = "AsyncTask", lpText = asyncTaskDef }
      , { name = "CountDownTimer", lpText = "TODO...\n" }
-     , { name = "SQLiteOpenHelper", lpText = "TODO...\n" }
+     , { name = "SQLiteOpenHelper", lpText = sqliteHelperDef }
      ]
      Nothing
      { loc = l.hostname, connection = Nothing }

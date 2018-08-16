@@ -10,3 +10,8 @@
 /*.apk
 /docker-server/_apks
 /server/typestates
+/droidstar-custom/
+/typestates
+/docker-client/_html
+/.android
+/.sbt

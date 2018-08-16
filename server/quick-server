@@ -1,0 +1,1 @@
+cabal run -- --enable-custom --home-dir $HOME/droidstar-demo --emu-address 172.17.0.2
