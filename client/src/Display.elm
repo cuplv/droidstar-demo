@@ -78,17 +78,34 @@ inputSection model mode = div [] <|
      Just e -> [lpInput e mode]
      Nothing -> [])
 
+numberInputs : List String -> List String
+numberInputs = numi 1
+
+numi : Int -> List String -> List String
+numi n ls = case ls of
+  "(CB?)" :: ls2 ->
+    ("(CB " ++ toString n ++ "?)") :: numi (n + 1) ls2
+  l :: ls2 -> l :: numi n ls2
+  [] -> []
+
+numberOutputs : List String -> List String
+numberOutputs = numo 1
+
+numo : Int -> List String -> List String
+numo n ls = case ls of
+  l :: ls2 -> (toString n ++ ": " ++ l) :: numo (n + 1) ls2
+  [] -> []
 
 trace : Bool -> LearnTrace -> Html Msg
 trace finished t = case t of
   TestOk is os ->
     span
       [ class "trace" ]
-      ([ span [] (List.map (\s -> span [class "okin"] [text s]) is) ]
+      ([ span [] (List.map (\s -> span [class "okin"] [text s]) (numberInputs is)) ]
        ++ case os of
             [] -> []
             os -> [ span [ class "tracesep" ] [text ">>"]
-                  , span [] (List.map (\s -> span [class "okout"] [text s]) os) ])
+                  , span [] (List.map (\s -> span [class "okout"] [text s]) (numberOutputs os)) ])
   TestErr is ->
     span
       [ class "trace" ]
