@@ -132,11 +132,11 @@ presented below as a graph, which describes a class's stateful behavior.
 A class object begins in state 0, and allows only those callins which
 have arrows leaving state 0 to be called.  Upon having an accepted
 callin invoked, the object changes to the state indicated by the
-callin's arrow.
+callin's <span class="okin">green</span> arrow.
 
-Somes states have a callback enabled, marked by an arrow labeled with
-`cb_something`.  This indicates that if you leave the object in this
-state, you will observe that callback.
+Somes states have a callback enabled, marked by a <span
+class="okout">blue</span> arrow.  This indicates that if you leave the
+object in this state, you will observe that callback.
 
 Callback typestates are built using query results.  Try looking back
 through the query log that produced this result, and comparing queries

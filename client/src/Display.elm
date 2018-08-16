@@ -3,6 +3,7 @@ module Display exposing (..)
 import Types exposing (..)
 import Exp exposing (..)
 import ServerComm exposing (tsURI)
+import BigContent exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -65,6 +66,7 @@ lpInput e mode = case (e.status,mode) of
 inputSection : Model -> ServerMode -> Html Msg
 inputSection model mode = div [] <|
   [ h1 [] [text "Inputs"]
+  , inputsDoc
   , Html.map ExpSelected <|
       Dropdown.view
         model.items
@@ -166,6 +168,7 @@ learnSection nc e = case e.status of
 
   Running ls -> div [] <|
     [ h1 [] [text "Learning"]
+    , learningDoc
     , traces ls
     ]
     ++
@@ -186,6 +189,7 @@ resultsSection : NetConf -> Exp -> Html msg
 resultsSection nc e = case resultTS e of
   Just ts -> div [] 
     [ h1 [] [text "Results"]
+    , resultsDoc
     , showTS nc ts
     ]
   _ -> div [] []
