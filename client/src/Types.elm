@@ -1,6 +1,7 @@
 module Types exposing (..)
 
 import Dropdown exposing (Dropdown)
+import Html exposing (Html)
 
 type LangMode = JavaMode | ScalaMode
 
@@ -8,6 +9,7 @@ type alias LP =
   { lpText : String
   , name : String
   , langMode : LangMode
+  , docs : Html Msg
   }
 
 editLP : String -> LP -> LP
@@ -104,6 +106,7 @@ updateLP mce s lp =
   { lp = { lpText = s
          , name = lp.name
          , langMode = lp.langMode
+         , docs = lp.docs
          }
   , status = Editing mce
   }

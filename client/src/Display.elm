@@ -75,7 +75,12 @@ inputSection model mode = div [] <|
            Nothing -> Nothing)
         .name
         model.dropdown
-  ] ++
+  ]
+  ++
+  (case model.selectedItem of
+   Just e -> [e.lp.docs]
+   Nothing -> [])
+  ++
   (case model.selectedItem of
      Just e -> [lpInput e mode]
      Nothing -> [])

@@ -4,6 +4,30 @@ import Markdown
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
+countDownTimerDocs : Html msg
+countDownTimerDocs = Markdown.toHtml [ class "docs" ] """
+The [`CountDownTimer`](https://developer.android.com/reference/android/os/CountDownTimer)
+is a simple timer that counts down for a particular amount of time and then returns
+a callback to announce it has finished.
+
+It has the following API.
+
+- `final CountDownTimer start()`
+- `final void cancel()`
+- `abstract void onFinished()`
+- `abstract void onTick()`
+
+Here, `start()` and `cancel()` are callins and `onFinished()` and `onTick()` are callbacks.
+The interface is pretty self-explanatory to us, but our intuition for how the callins and
+callbacks interact with each other has not been machine-checked.
+
+We may also have questions about edge-cases, such as
+
+1. Will calling `cancel()` when the timer is not running cause an error?
+2. If the tick interval lines up perfectly with the timeout interval, do we get a final tick?
+
+"""
+
 countDownTimerDef : String
 countDownTimerDef = """
 package edu.colorado.plv.droidstar.experiments.lp;
@@ -89,17 +113,23 @@ public class CountDownTimerLP extends LearningPurpose {
     // callbacks executed by the object.
 
     public static String FINISHED = "finished";
+    public static String TICK = "tick";
 
     // Callbacks are recorded by instrumenting them with a "respond"
     // call.  Generally, output tracking is performed simply by
     // creating a subclass which adds a "respond(callback)" to each
     // callback method we care about.
+    //
+    // This method is an opportunity to tune our experiment; listening for
+    // additional callbacks will add time to the experiment and clutter the
+    // results.  Try commenting out the `respond(TICK)` line to exclude it
+    // from consideration.
     public class CTimer extends CountDownTimer {
         public CTimer(long s) {
-            super(s, 1000);
+            super(s, 550);
         }
         public void onTick(long s) {
-
+            respond(TICK);
         }
         public void onFinish() {
             respond(FINISHED);
