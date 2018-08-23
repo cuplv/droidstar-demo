@@ -2,9 +2,12 @@ module Types exposing (..)
 
 import Dropdown exposing (Dropdown)
 
+type LangMode = JavaMode | ScalaMode
+
 type alias LP =
   { lpText : String
   , name : String
+  , langMode : LangMode
   }
 
 editLP : String -> LP -> LP
@@ -100,6 +103,7 @@ updateLP : Maybe CompileError -> String -> LP -> Exp
 updateLP mce s lp =
   { lp = { lpText = s
          , name = lp.name
+         , langMode = lp.langMode
          }
   , status = Editing mce
   }

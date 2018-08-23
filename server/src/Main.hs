@@ -116,30 +116,30 @@ receiveJSON conn = do
 
 listen :: ServerMode -> WS.Connection -> ClientId -> Concurrent.MVar State -> IO ()
 listen mode conn clientId stateRef = Monad.forever $ do
-  (SReq name lp) <- receiveJSON conn
+  (SReq name lp l) <- receiveJSON conn
   let send = sendCMsg conn
   case mode of
     StaticMode -> if or (map (== name)
                              ["AsyncTask"
                              ,"CountDownTimer"
                              ,"SQLiteOpenHelper"])
-                     then experiment send (SReq name lp)
+                     then experiment send (SReq name lp l)
                      else die $ "Class " <> name <> " not supported."
-    CustomMode -> experimentCustom send (SReq name lp)
+    CustomMode -> experimentCustom send (SReq name lp l)
 
 dbgMsg send t = do
   send (CAlert t)
   putStrLn (Text.unpack t)
   IO.hFlush IO.stdout
 
-experiment send (SReq name _) = do
+experiment send (SReq name _ _) = do
   h <- home
   installAdb (h <> fromText "droidstar" <> apkPath)
   runE name send
 
-experimentCustom send (SReq name lp) = do
+experimentCustom send (SReq name lp l) = do
   refreshCustom
-  res <- genLpApk name lp
+  res <- genLpApk name lp l
   case res of
     Right f -> do
       installAdb f

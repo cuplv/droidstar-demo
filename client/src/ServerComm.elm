@@ -82,4 +82,7 @@ serverReq nc lp =
     (encode 2 (Json.Encode.object
                  [ ("name", Json.Encode.string lp.name)
                  , ("lp", string lp.lpText)
+                 , ("lang", string (case lp.langMode of
+                                      JavaMode -> "java"
+                                      ScalaMode -> "scala"))
                  ]))

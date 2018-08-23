@@ -1,6 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ClientComm (CMsg (..), sendCMsg, SReq (..), ServerMode (..)) where
+module ClientComm 
+  ( CMsg (..)
+  , sendCMsg
+  , SReq (..)
+  , ServerMode (..)
+  , LangMode (..)
+  , lmodetext
+  ) where
 
 import Prelude hiding (FilePath)
 
@@ -40,13 +47,25 @@ instance ToJSON CMsg where
 
 data ServerMode = StaticMode | CustomMode
 
-data SReq = SReq Text Text
+data LangMode = ScalaMode | JavaMode
+
+lmodetext :: LangMode -> Text
+lmodetext ScalaMode = "scala"
+lmodetext JavaMode = "java"
+
+data SReq = SReq Text Text LangMode
 
 instance FromJSON SReq where
   parseJSON = withObject "SReq" $ \v -> do
     n <- v .: "name"
     lp <- v .: "lp"
-    return (SReq n lp)
+    lm <- v .: "lang"
+    lmode <- if lm == "java"
+                then return JavaMode
+                else if lm == "scala"
+                        then return ScalaMode
+                        else fail $ "No language mode \"" ++ (Text.unpack lm) ++ "\""
+    return (SReq n lp lmode)
 
 sendCMsg :: WS.Connection -> CMsg -> IO ()
 sendCMsg conn = WS.sendTextData conn . encode
