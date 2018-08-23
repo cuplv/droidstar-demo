@@ -41,6 +41,13 @@ import ClientComm
 import Sbt
 import CLI
 
+enabledLPs = 
+  ["AsyncTask"
+  ,"CountDownTimer"
+  ,"SQLiteOpenHelper"
+  ,"FileObserver"
+  ,"VelocityTracker"]
+
 main :: IO ()
 main = do 
   (Conf mode mhome maddr mdelay) <- getConf
@@ -119,10 +126,7 @@ listen mode conn clientId stateRef = Monad.forever $ do
   (SReq name lp l) <- receiveJSON conn
   let send = sendCMsg conn
   case mode of
-    StaticMode -> if or (map (== name)
-                             ["AsyncTask"
-                             ,"CountDownTimer"
-                             ,"SQLiteOpenHelper"])
+    StaticMode -> if or (map (== name) enabledLPs)
                      then experiment send (SReq name lp l)
                      else die $ "Class " <> name <> " not supported."
     CustomMode -> experimentCustom send (SReq name lp l)

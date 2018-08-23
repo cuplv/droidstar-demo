@@ -7,25 +7,57 @@ import Html.Attributes exposing (..)
 countDownTimerDef : String
 countDownTimerDef = """
 package edu.colorado.plv.droidstar.experiments.lp;
-
 import java.util.List;
 import java.util.ArrayList;
- 
 import android.os.CountDownTimer;
 import android.os.Handler.Callback;
 import android.content.Context;
-
-
 import edu.colorado.plv.droidstar.LearningPurpose;
 import static edu.colorado.plv.droidstar.Static.*;
 
 public class CountDownTimerLP extends LearningPurpose {
+
+
+    // * State and experiment setup
+    //
+    // In this section, we define the state that will be tested during
+    // the experiment and the way to reset the state between tests in
+    // order to isolate their effects.
+
     protected CountDownTimer timer;
 
-    // INPUTS
+    public CountDownTimerLP(Context c) {
+        super(c);
+        // The timer will be initialized by resetActions()
+        this.timer = null;
+    }
+
+    // The resetActions destroy and recreate the state, isolating the
+    // new state from any effects (or pending callbacks) the old state
+    // accumulated.
+    protected String resetActions(Context context, Callback callback) {
+        if (timer != null) {
+            timer.cancel();
+        }
+        timer = new CTimer(1100);
+        return null;
+    }
+
+
+    // * Inputs
+    //
+    // In this section, we declare and define the list of inputs that
+    // DroidStar should investigate.  DroidStar's goal is to learn
+    // exactly what stateful effects each input has on the
+    // CountDownTimer object, including in what order they are allowed
+    // to be invoked.
+
+    // Convenient definitions so we don't mistype the strings later
     public static String START = "start";
     public static String CANCEL = "cancel";
 
+    // The list of inputs DroidStar is responsible for learning about.
+    // DroidStar will use this list to create the necessary tests.
     protected List<String> uniqueInputSet() {
         List<String> inputs = new ArrayList();
         inputs.add(START);
@@ -34,48 +66,11 @@ public class CountDownTimerLP extends LearningPurpose {
         return inputs;
     }
 
-    // OUTPUTS
-    public static String FINISHED = "finished";
-    public static String TICK = "tick";
-
-    public boolean isError(String output) {
-        // there are no errors for this class?
-        return false;
-    }
-
-    public String shortName() {
-        return "CountDownTimer";
-    }
-
-    public int betaTimeout() {
-        // Ticks come every second, so timeout should be more than a
-        // second
-        return 2000;
-    }
-
-    public List<String> singleInputs() {
-        List<String> inputs = new ArrayList();
-        inputs.add(START);
-        return inputs;
-    }
-
-    public CountDownTimerLP(Context c) {
-        super(c);
-        this.timer = null;
-    }
-
-    protected String resetActions(Context context, Callback callback) {
-        doReset();
-        return null;
-    }
-
-    protected void doReset() {
-        if (timer != null) {
-            timer.cancel();
-        }
-        timer = new CTimer(1100);
-    }
-
+    // The "definition" of each input, meaning the actual code
+    // invocations DroidStar should perform in order to run an input.
+    //
+    // Here, as in most cases, each input corresponds to a single
+    // method call.
     public void giveInput(String input, int altKey) throws Exception {
         if (input.equals(START)) {
             timer.start();
@@ -87,15 +82,271 @@ public class CountDownTimerLP extends LearningPurpose {
         }
     }
 
+
+    // * Outputs
+    //
+    // Here we set up the mechanism by which DroidStar records
+    // callbacks executed by the object.
+
+    public static String FINISHED = "finished";
+
+    // Callbacks are recorded by instrumenting them with a "respond"
+    // call.  Generally, output tracking is performed simply by
+    // creating a subclass which adds a "respond(callback)" to each
+    // callback method we care about.
     public class CTimer extends CountDownTimer {
         public CTimer(long s) {
             super(s, 1000);
         }
         public void onTick(long s) {
-            // respond(TICK);
+
         }
         public void onFinish() {
             respond(FINISHED);
+        }
+    }
+
+
+    // * Settings
+    //
+    // Here we set various settings necessary to the experiment
+
+    // Some classes send a callback upon error instead of throwing an
+    // exception.  We use this setting to declare callbacks that
+    // should be considered as errors.
+    //
+    // CountDownTimer does not have any of these.
+    public boolean isError(String output) {
+        return false;
+    }
+
+    // Experiment name for logging purposes
+    public String shortName() {
+        return "CountDownTimer";
+    }
+
+    // How long DroidStar should wait for a callback before assuming
+    // there will be none.  This value is very dependent on the class
+    // being studied.  Large values are sometimes necessary, will
+    // significantly extend the learning time.  (Time is in
+    // milliseconds)
+    public int betaTimeout() {
+        return 2000;
+    }
+
+    // DroidStar is a tool for learing *regular* behavior.  Some
+    // classes, like CountDownTimer, are non-regular.  This means that
+    // calling an input N times will produce N callbacks.
+    //
+    // In order to learn a *regular subset* of its behavior, we can
+    // restrict certain inputs to only be called once in any
+    // particular test.
+    public List<String> singleInputs() {
+        List<String> inputs = new ArrayList();
+        inputs.add(START);
+        return inputs;
+    }
+}
+"""
+
+fileObserverDef : String
+fileObserverDef = """
+package edu.colorado.plv.droidstar.experiments.lp;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+import java.util.ArrayDeque;
+
+import android.os.Handler.Callback;
+import android.content.Context;
+import android.util.Log;
+
+import edu.colorado.plv.droidstar.LearningPurpose;
+import static edu.colorado.plv.droidstar.Static.*;
+
+import android.os.FileObserver;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.FileOutputStream;
+import java.io.PrintWriter;
+import java.io.FileNotFoundException;
+
+public class FileObserverLP extends LearningPurpose {
+    protected TestObserver obs;
+    protected File testfile;
+
+    public String shortName() {return "FileObserver";}
+
+    public FileObserverLP(Context c) {
+        super(c);
+        obs = null;
+        testfile = new File(c.getFilesDir(), "file-observer-testfile");
+    }
+
+    // INPUTS
+    public static String START = "start";
+    public static String STOP = "stop";
+    public static String MODIFY = "modify";
+    public static String DELETE = "delete";
+
+    // OUTPUTS
+    public static String MODIFIED = "modified";
+    public static String DELETED = "deleted";
+
+    protected String resetActions(Context context, Callback callback) {
+        if (obs != null) obs.stopWatching();
+        testfile.delete();
+        try {
+            testfile.createNewFile();
+            Log.d("STARLING:Q", "File created");
+        }
+        catch (Exception e) {e.printStackTrace();}
+        
+        obs = new TestObserver();
+        return null;
+    }
+
+    public boolean isError(String output) {return false;}
+
+    public int betaTimeout() {return 500;}
+
+    protected List<String> uniqueInputSet() {
+        List<String> is = new ArrayList();
+        is.add(START);
+        is.add(STOP);
+        is.add(MODIFY);
+        is.add(DELETE);
+        return is;
+    }
+
+    public int postResetTimeout() {return 100;}
+
+    public int eqLength() {return 3;}
+
+    public void giveInput(String i, int altKey) throws Exception {
+        if (i.equals(DELETE)) {
+            testfile.delete();
+            Log.d("STARLING:Q", "File deleted");
+            
+        } else if (i.equals(MODIFY)) {
+            writeToFile(testfile);
+            Log.d("STARLING:Q", "Wrote to file");
+            
+        } else if (i.equals(START)) {
+            obs.startWatching();
+            Log.d("STARLING:Q", "Started watching");
+            
+        } else if (i.equals(STOP)) {
+            obs.stopWatching();
+            Log.d("STARLING:Q", "Stopped watching");
+        }
+    }
+
+    public boolean validQuery(Queue<String> q) {
+        Queue<String> query = new ArrayDeque(q);
+    
+        while (!query.isEmpty()) {
+            String i1 = query.remove();
+            String i2 = query.peek();
+            if ((i1.equals(MODIFY) || i1.equals(DELETE))
+                && !(i2 == null || i2.equals(DELTA))) {
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    public class TestObserver extends FileObserver {
+        public TestObserver() {
+            super(testfile.getPath(), FileObserver.ALL_EVENTS);
+        }
+        public void onEvent(int event, String path) {
+            Log.d("STARLING:Q", "We got an event");
+            switch (event) {
+            case FileObserver.DELETE_SELF:
+                respond(DELETED);
+                break;
+            case FileObserver.MODIFY:
+                respond(MODIFIED);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    protected void writeToFile(File f) throws Exception {
+        FileOutputStream fo = new FileOutputStream(f);
+        PrintWriter p = new PrintWriter(fo);
+        p.append("hi");
+        p.flush();
+        p.close();
+    }
+}
+"""
+
+velocityTrackerDef : String
+velocityTrackerDef = """
+package edu.colorado.plv.droidstar.experiments.lp;
+
+import java.util.List;
+import java.util.ArrayList;
+
+import java.lang.AssertionError;
+import java.lang.Thread;
+import java.util.concurrent.TimeUnit;
+
+import android.os.Handler.Callback;
+import android.content.Context;
+import android.view.VelocityTracker;
+import android.view.MotionEvent;
+import android.os.SystemClock;
+
+import edu.colorado.plv.droidstar.LearningPurpose;
+import static edu.colorado.plv.droidstar.Static.*;
+
+public class VelocityTrackerLP extends LearningPurpose {
+        protected VelocityTracker vt;
+
+    protected String resetActions(Context ctx, Callback cb) {
+        this.vt = VelocityTracker.obtain();
+        return null;
+    }
+    protected List<String> uniqueInputSet() {
+        List<String>is = new ArrayList();
+        is.add("move");
+        is.add("clear");
+        is.add("compute");
+        is.add("get");
+        is.add("recycle");
+        return is;
+    }
+    public int betaTimeout() {
+        return 200;
+    }
+    public boolean isError(String o) {return false;}
+    public String shortName() {
+        return "VelocityTracker";
+    }
+    public VelocityTrackerLP(Context c) {
+        super(c);
+    }
+    public void giveInput(String input, int altKey) throws Exception {
+        if (input.equals("move")) {
+            MotionEvent e = MotionEvent.obtain(SystemClock.uptimeMillis(),
+                                               SystemClock.uptimeMillis(),
+                                               MotionEvent.ACTION_DOWN,
+                                               0,0,0);
+            vt.addMovement(e);
+        } else if (input.equals("clear")) {
+            vt.clear();
+        } else if (input.equals("compute")) {
+            vt.computeCurrentVelocity(1);
+        } else if (input.equals("get")) {
+            vt.getXVelocity();
+        } else if (input.equals("recycle")) {
+            vt.recycle();
         }
     }
 }

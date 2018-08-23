@@ -27,9 +27,11 @@ init l =
   (Model
      Dropdown.init
      []
-     [ { name = "AsyncTask", lpText = asyncTaskDef, langMode = ScalaMode }
-     , { name = "CountDownTimer", lpText = countDownTimerDef, langMode = JavaMode }
+     [ { name = "CountDownTimer", lpText = countDownTimerDef, langMode = JavaMode }
+     , { name = "AsyncTask", lpText = asyncTaskDef, langMode = ScalaMode }
      , { name = "SQLiteOpenHelper", lpText = sqliteHelperDef, langMode = ScalaMode }
+     , { name = "FileObserver", lpText = fileObserverDef, langMode = JavaMode }
+     , { name = "VelocityTracker", lpText = velocityTrackerDef, langMode = JavaMode }
      ]
      Nothing
      { loc = l.hostname, connection = Nothing }
