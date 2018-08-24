@@ -111,7 +111,10 @@ withoutClient :: ClientId -> State -> State
 withoutClient clientId = List.filter ((/=) clientId . fst)
 
 disconnectClient :: ClientId -> Concurrent.MVar State -> IO ()
-disconnectClient clientId stateRef = Concurrent.modifyMVar_ stateRef $ \state ->
+disconnectClient clientId stateRef = Concurrent.modifyMVar_ stateRef $ \state -> do
+  uninstallAdb
+  putStrLn "Disconnected and cleaned up client session."
+  IO.hFlush IO.stdout
   return $ withoutClient clientId state
   
 receiveJSON :: (FromJSON a) => WS.Connection -> IO a
@@ -129,7 +132,7 @@ listen mode conn clientId stateRef = Monad.forever $ do
     StaticMode -> if or (map (== name) enabledLPs)
                      then experiment send (SReq name lp l)
                      else die $ "Class " <> name <> " not supported."
-    CustomMode -> experimentCustom send (SReq name lp l)
+    CustomMode -> experimentCustom send (SReq name lp l) >> uninstallAdb
 
 dbgMsg send t = do
   send (CAlert t)

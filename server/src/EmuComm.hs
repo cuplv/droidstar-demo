@@ -4,6 +4,7 @@ module EmuComm
   ( module EmuMsg
   , connectAdb
   , installAdb
+  , uninstallAdb
   , apkPath
   , droidstarPath
   , droidstarCustomPath
@@ -41,6 +42,12 @@ installAdb :: FilePath -> IO ()
 installAdb apk = do
   proc "adb" ["install","-r",format fp apk] empty
   putStrLn "Installed experiment."
+  IO.hFlush IO.stdout
+
+uninstallAdb :: IO ()
+uninstallAdb = do
+  proc "adb" ["uninstall","edu.colorado.plv.droidstar.experiments"] empty
+  putStrLn "Ensured experiment is uninstalled/killed."
   IO.hFlush IO.stdout
 
 apkPath :: FilePath
