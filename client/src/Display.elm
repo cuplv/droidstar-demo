@@ -24,7 +24,7 @@ view model = case model.netConf.connection of
            , resultsSection model.netConf e
            ]
          Nothing -> [])
-  Nothing -> div [] [text "Awaiting server connection..."]
+  Nothing -> div [] [text "Waiting for available server..."]
 
 alertSection : List Alert -> Html msg
 alertSection ls = case ls of

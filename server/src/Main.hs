@@ -5,6 +5,8 @@ module Main where
 
 import Prelude hiding (FilePath)
 
+import Control.Monad.STM (atomically)
+import qualified Control.Concurrent.STM.TChan   as STM
 import qualified Control.Concurrent             as Concurrent
 import qualified Control.Exception              as Exception
 import qualified Control.Monad                  as Monad
@@ -48,6 +50,12 @@ enabledLPs =
   ,"FileObserver"
   ,"VelocityTracker"]
 
+releaseEmu :: STM.TChan EmuReady -> IO ()
+releaseEmu c = atomically . STM.writeTChan c =<< mkReadyAdb
+
+takeEmu :: STM.TChan EmuReady -> IO ()
+takeEmu c = atomically (STM.readTChan c) >> return ()
+
 main :: IO ()
 main = do 
   (Conf mode mhome maddr mdelay) <- getConf
@@ -67,9 +75,11 @@ main = do
       do Concurrent.threadDelay (1000 * 1000 * mdelay)
          connectAdb ipaddr
          state <- Concurrent.newMVar []
+         queue <- STM.newTChanIO
+         releaseEmu queue
          Warp.run 30025 $ WS.websocketsOr
            WS.defaultConnectionOptions
-           (wsApp mode state)
+           (wsApp mode queue)
            httpApp
     _ -> die "No ip"
 
@@ -94,28 +104,18 @@ httpApp request respond = do
       []
       "Not a results request."
 
-type ClientId = Int
-type Client = (ClientId, WS.Connection)
-type State = [Client]
-
-nextId :: State -> ClientId
-nextId = Maybe.maybe 0 ((+) 1) . Safe.maximumMay . List.map fst
-
-connectClient :: ServerMode -> WS.Connection -> Concurrent.MVar State -> IO ClientId
-connectClient mode conn stateRef = Concurrent.modifyMVar stateRef $ \state -> do
-  let clientId = nextId state
+connectClient :: ServerMode -> WS.Connection -> STM.TChan EmuReady -> IO ()
+connectClient mode conn chan = do
+  takeEmu chan 
   sendCMsg conn (CHello mode)
-  return ((clientId, conn) : state, clientId)
-  
-withoutClient :: ClientId -> State -> State
-withoutClient clientId = List.filter ((/=) clientId . fst)
+  return ()
 
-disconnectClient :: ClientId -> Concurrent.MVar State -> IO ()
-disconnectClient clientId stateRef = Concurrent.modifyMVar_ stateRef $ \state -> do
-  uninstallAdb
+disconnectClient :: STM.TChan EmuReady -> IO ()
+disconnectClient chan = do
+  releaseEmu chan
   putStrLn "Disconnected and cleaned up client session."
   IO.hFlush IO.stdout
-  return $ withoutClient clientId state
+  return ()
   
 receiveJSON :: (FromJSON a) => WS.Connection -> IO a
 receiveJSON conn = do 
@@ -124,15 +124,16 @@ receiveJSON conn = do
     Right a -> return a
     Left s -> die (Text.pack s)
 
-listen :: ServerMode -> WS.Connection -> ClientId -> Concurrent.MVar State -> IO ()
-listen mode conn clientId stateRef = Monad.forever $ do
+listen :: ServerMode -> WS.Connection -> IO ()
+listen mode conn = Monad.forever $ do
   (SReq name lp l) <- receiveJSON conn
   let send = sendCMsg conn
-  case mode of
-    StaticMode -> if or (map (== name) enabledLPs)
-                     then experiment send (SReq name lp l)
-                     else die $ "Class " <> name <> " not supported."
-    CustomMode -> experimentCustom send (SReq name lp l) >> uninstallAdb
+  if or (map (== name) enabledLPs)
+     then case mode of
+            StaticMode -> experiment send (SReq name lp l)
+            CustomMode -> experimentCustom send (SReq name lp l)   
+     else die $ "Class " <> name <> " not supported."
+  
 
 dbgMsg send t = do
   send (CAlert t)
@@ -160,6 +161,7 @@ runE name send = do
   launchExp name
   followLog send
   dbgMsg send "All done."
+  uninstallAdb
 
 followLog :: (CMsg -> IO ()) -> IO ()
 followLog send = logcatDS >>= r
@@ -174,11 +176,12 @@ followLog send = logcatDS >>= r
             DsCheck t -> send (CCheck t) >> more
             DsResult t -> send (CResult t) >> kill
 
-wsApp :: ServerMode -> Concurrent.MVar State -> WS.ServerApp
-wsApp mode stateRef pendingConn = do
+wsApp :: ServerMode -> STM.TChan EmuReady -> WS.ServerApp
+wsApp mode chan pendingConn = do
+  -- WS.rejectRequestWith pendingConn (WS.defaultRejectRequest { WS.rejectCode = 502 })
   conn <- WS.acceptRequest pendingConn
-  clientId <- connectClient mode conn stateRef
+  connectClient mode conn chan
   WS.forkPingThread conn 30
   Exception.finally
-    (listen mode conn clientId stateRef)
-    (disconnectClient clientId stateRef)
+    (listen mode conn)
+    (disconnectClient chan)

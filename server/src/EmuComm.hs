@@ -2,9 +2,11 @@
 
 module EmuComm 
   ( module EmuMsg
+  , EmuReady
   , connectAdb
   , installAdb
   , uninstallAdb
+  , mkReadyAdb
   , apkPath
   , droidstarPath
   , droidstarCustomPath
@@ -27,6 +29,8 @@ import qualified Control.Concurrent as Concurrent
 -- import Config
 import EmuMsg
 
+data EmuReady = EmuReady
+
 connectAdb :: String -> IO ()
 connectAdb ip = do
   (_,o) <- procStrict "adb" ["connect",Text.pack ip] empty
@@ -47,8 +51,12 @@ installAdb apk = do
 uninstallAdb :: IO ()
 uninstallAdb = do
   proc "adb" ["uninstall","edu.colorado.plv.droidstar.experiments"] empty
-  putStrLn "Ensured experiment is uninstalled/killed."
+  clearLog
+  putStrLn "Ensured any previous experiment is uninstalled/killed."
   IO.hFlush IO.stdout
+
+mkReadyAdb :: IO EmuReady
+mkReadyAdb = uninstallAdb >> return EmuReady
 
 apkPath :: FilePath
 apkPath = fromText "driver-app/target/android/output/droidstar-debug.apk"
