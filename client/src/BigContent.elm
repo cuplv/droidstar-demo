@@ -4,20 +4,53 @@ import Markdown
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
+import Bootstrap.Table as Table
+
 countDownTimerDocs : Html msg
-countDownTimerDocs = Markdown.toHtml [ class "docs" ] """
+countDownTimerDocs = div []
+  [ Markdown.toHtml [ class "docs" ] """
 The [`CountDownTimer`](https://developer.android.com/reference/android/os/CountDownTimer)
 is a simple timer that counts down for a particular amount of time and then returns
 a callback to announce it has finished.
 
 It has the following API.
-
-- `final CountDownTimer start()`
-- `final void cancel()`
-- `abstract void onFinished()`
-- `abstract void onTick()`
-
-Here, `start()` and `cancel()` are callins and `onFinished()` and `onTick()` are callbacks.
+"""
+  , Table.table
+      { options = [Table.striped, Table.hover]
+      , thead = Table.simpleThead
+          [ Table.th [] [ text "Return" ]
+          , Table.th [] [ text "Method" ]
+          , Table.th [] [ text "Description" ]
+          ]
+      , tbody = Table.tbody []
+          [ Table.tr []
+              [ Table.td [] [text "final CountDownTimer"]
+              , Table.td [] [text "start()"]
+              , Table.td [] [text "Start the countdown."]
+              ]
+          , Table.tr []
+              [ Table.td [] [text "final void"]
+              , Table.td [] [text "cancel()"]
+              , Table.td [] [text "Cancel the countdown."]
+              ]
+          , Table.tr []
+              [ Table.td [] [text "abstract void"]
+              , Table.td [] [text "onFinish()"]
+              , Table.td [] [text "Callaback fired when the time is up."]
+              ]
+          , Table.tr []
+              [ Table.td [] [text "abstract void"]
+              , Table.td [] [text "onTick(long millisUntilFinished)"]
+              , Table.td [] [text "Callback fired on regular interval."]
+              ]
+          ]
+       }
+-- - `final CountDownTimer start()`
+-- - `final void cancel()`
+-- - `abstract void onFinished()`
+-- - `abstract void onTick()`
+  , Markdown.toHtml [ class "docs" ] """
+Here, `start()` and `cancel()` are callins and `onFinish()` and `onTick()` are callbacks.
 The interface is pretty self-explanatory to us, but our intuition for how the callins and
 callbacks interact with each other has not been machine-checked.
 
@@ -25,8 +58,8 @@ We may also have questions about edge-cases, such as
 
 1. Will calling `cancel()` when the timer is not running cause an error?
 2. If the tick interval lines up perfectly with the timeout interval, do we get a final tick?
-
 """
+  ]
 
 countDownTimerDef : String
 countDownTimerDef = """
@@ -481,7 +514,7 @@ class AsyncTaskLP(c: Context) extends LearningPurpose(c) {
 
 inputsDoc = Markdown.toHtml [ class "docs" ] """
 
-Begin by clicking one of the class names below.
+Begin by choosing a class interface to learn.
 
 """
 

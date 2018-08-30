@@ -72,8 +72,8 @@ tryDecServerMsg s = case D.decodeString decodeSMsg s of
   Ok m -> ServerMsg m
   Err _ -> BadServerMsg s
 
-subscriptions : Model -> Sub Msg
-subscriptions model = WebSocket.listen (wsUrl model.netConf.loc) tryDecServerMsg
+serverSub : Model -> Sub Msg
+serverSub model = WebSocket.listen (wsUrl model.netConf.loc) tryDecServerMsg
 
 serverReq : NetConf -> LP -> Cmd Msg
 serverReq nc lp =

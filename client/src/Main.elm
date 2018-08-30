@@ -23,6 +23,13 @@ main =
     , subscriptions = subscriptions
     }
 
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.batch
+    [ Dropdown.subscriptions model.dropdown DropdownUpdate
+    , serverSub model
+    ]
+
 init : Navigation.Location -> (Model, Cmd Msg)
 init l = 
   (Model

@@ -91,14 +91,21 @@ lpInput e mode = case (e.status,mode) of
 
 inputSection : Model -> ServerMode -> Html Msg
 inputSection model mode = div [] <|
-  [ h1 [] [text "Inputs"]
-  , inputsDoc
-  , Dropdown.dropdown
+  -- [ h1 [] [text "Inputs"]
+  (case model.selectedItem of 
+     Just _ -> []
+     Nothing -> [ inputsDoc ])
+  ++
+  [ Dropdown.dropdown
       model.dropdown
       { options = [ ]
       , toggleMsg = DropdownUpdate
       , toggleButton =
-          Dropdown.toggle [ Button.primary ] [ text "My dropdown" ]
+          Dropdown.toggle
+            [ Button.primary ]
+            [ text (case model.selectedItem of
+                      Just exp -> exp.lp.name
+                      Nothing -> "Classes") ]
       , items = List.map (\lp ->
           Dropdown.buttonItem [ onClick (ExpSelected lp) ] [ text lp.name ]
         ) model.items
