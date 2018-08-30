@@ -1,6 +1,7 @@
 module Types exposing (..)
 
-import Dropdown exposing (Dropdown)
+-- import Dropdown exposing (Dropdown)
+import Bootstrap.Dropdown as Dropdown
 import Html exposing (Html)
 
 type LangMode = JavaMode | ScalaMode
@@ -53,7 +54,7 @@ type ExpStatus =
   | Finished (List LearnTrace) (Maybe ShowTS)
 
 type alias Model =
-  { dropdown : Dropdown
+  { dropdown : Dropdown.State
   , alertLog : List Alert
   , items : List LP
   , selectedItem : Maybe Exp
@@ -112,7 +113,8 @@ updateLP mce s lp =
   }
 
 type Msg =
-    ExpSelected (Dropdown.Msg LP)
+    ExpSelected LP
+  | DropdownUpdate Dropdown.State
   | ServerMsg ServerMsg
   | NoMsg
   | BadServerMsg String

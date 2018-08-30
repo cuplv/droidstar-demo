@@ -3,7 +3,8 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import WebSocket
 import Navigation
-import Dropdown exposing (Dropdown, Event(ItemSelected))
+-- import Dropdown exposing (Dropdown, Event(ItemSelected))
+import Bootstrap.Dropdown as Dropdown
 import Markdown
 
 import BigContent exposing (..)
@@ -25,7 +26,7 @@ main =
 init : Navigation.Location -> (Model, Cmd Msg)
 init l = 
   (Model
-     Dropdown.init
+     Dropdown.initialState
      []
      [ { name = "CountDownTimer"
        , lpText = countDownTimerDef
@@ -59,20 +60,28 @@ update msg model =
 
     NoMsg -> skip
 
-    ExpSelected ddmsg ->
-      let
-        ( updatedDropdown, event ) =
-          Dropdown.update ddmsg model.dropdown
-      in
-        case event of
-          ItemSelected exp ->
-            ({ model
-                | dropdown = updatedDropdown
-                , selectedItem = Just { lp = exp, status = Editing Nothing }
-                , alertLog = []
-            }
-            , Cmd.none)
-          _ -> ({ model | dropdown = updatedDropdown }, Cmd.none)
+    DropdownUpdate state -> ({model | dropdown = state}, Cmd.none)
+
+    ExpSelected exp ->
+      ({ model
+          | selectedItem = Just { lp = exp, status = Editing Nothing }
+          , alertLog = []
+       }
+       , Cmd.none)
+    -- ExpSelected ddmsg ->
+    --   let
+    --     ( updatedDropdown, event ) =
+    --       Dropdown.update ddmsg model.dropdown
+    --   in
+    --     case event of
+    --       ItemSelected exp ->
+    --         ({ model
+    --             | dropdown = updatedDropdown
+    --             , selectedItem = Just { lp = exp, status = Editing Nothing }
+    --             , alertLog = []
+    --         }
+    --         , Cmd.none)
+    --       _ -> ({ model | dropdown = updatedDropdown }, Cmd.none)
 
     ServerMsg smsg -> case smsg of
       SHello m ->

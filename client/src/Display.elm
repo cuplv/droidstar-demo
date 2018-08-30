@@ -8,10 +8,36 @@ import BigContent exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Dropdown exposing (Dropdown, Event(ItemSelected))
+-- import Dropdown exposing (Dropdown, Event(ItemSelected))
+
+import Bootstrap.CDN as CDN
+import Bootstrap.Grid as Grid
+import Bootstrap.Navbar as Navbar
+import Bootstrap.Dropdown as Dropdown
+import Bootstrap.Button as Button
 
 view : Model -> Html Msg
-view model = case model.netConf.connection of
+view model = Grid.container []
+  [ CDN.stylesheet
+  , navbar model
+  , view2 model
+  ]
+
+navbar : Model -> Html Msg
+navbar model =
+  Navbar.config (\_ -> NoMsg)
+    -- |> Navbar.withAnimation
+    |> Navbar.container
+    |> Navbar.brand [ href "#" ] [ text "DroidStar" ]
+    |> Navbar.items
+       [ Navbar.itemLink
+           [ href "http://plv.colorado.edu/droidstar/demo-tutorial" ]
+           [ text "Tutorial" ]
+       ]
+    |> Navbar.view (Tuple.first (Navbar.initialState (\_ -> NoMsg)))
+
+view2 : Model -> Html Msg
+view2 model = case model.netConf.connection of
   Just mode ->
     div [] <|
       [ styleHeader
@@ -67,14 +93,24 @@ inputSection : Model -> ServerMode -> Html Msg
 inputSection model mode = div [] <|
   [ h1 [] [text "Inputs"]
   , inputsDoc
-  , Html.map ExpSelected <|
-      Dropdown.view
-        model.items
-        (case model.selectedItem of
-           Just e -> Just e.lp
-           Nothing -> Nothing)
-        .name
-        model.dropdown
+  , Dropdown.dropdown
+      model.dropdown
+      { options = [ ]
+      , toggleMsg = DropdownUpdate
+      , toggleButton =
+          Dropdown.toggle [ Button.primary ] [ text "My dropdown" ]
+      , items = List.map (\lp ->
+          Dropdown.buttonItem [ onClick (ExpSelected lp) ] [ text lp.name ]
+        ) model.items
+      }
+  -- , Html.map ExpSelected <|
+  --     Dropdown.view
+  --       model.items
+  --       (case model.selectedItem of
+  --          Just e -> Just e.lp
+  --          Nothing -> Nothing)
+  --       .name
+  --       model.dropdown
   ]
   ++
   (case model.selectedItem of
