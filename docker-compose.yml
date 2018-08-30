@@ -1,0 +1,11 @@
+version: '3'
+services:
+  client:
+    image: droidstar-client:latest
+    ports:
+      - "30023:80"
+  server:
+    image: droidstar-combined-dynamic:latest
+    privileged: true
+    ports:
+      - "30025:30025"
