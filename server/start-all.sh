@@ -1,9 +1,8 @@
+#!/usr/bin/env bash
 # startup script
 
-droidstar-demo-server     \ 
-  --init-delay 120        \
-  --emu-address 127.0.0.1 \
-  --enable-custom \
-  &
+which adb
 
-/start
+/bin/droidstar-demo-server --init-delay 120 --emu-address 127.0.0.1 &
+
+/start.sh

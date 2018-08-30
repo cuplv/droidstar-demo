@@ -1,45 +1,43 @@
 FROM ubuntu:16.04
 
-MAINTAINER Nick Lewchenko "nicholas.lewchenko@colorado.edu"
+
+##### Install GHC
+# (from https://github.com/freebroccolo/docker-haskell/blob/af83447feb6ebeabbc0cbad27adb3895e6262951/8.4/Dockerfile)
+
+ENV LANG            C.UTF-8
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gnupg ca-certificates dirmngr curl git && \
+    echo 'deb http://downloads.haskell.org/debian stretch main' > /etc/apt/sources.list.d/ghc.list && \
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys BA3CBA3FFE22B574 && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends ghc-8.4.3 cabal-install-2.2 \
+        zlib1g-dev libtinfo-dev libsqlite3-dev g++ netbase xz-utils make && \
+    curl -fSL https://github.com/commercialhaskell/stack/releases/download/v1.7.1/stack-1.7.1-linux-x86_64.tar.gz -o stack.tar.gz && \
+    curl -fSL https://github.com/commercialhaskell/stack/releases/download/v1.7.1/stack-1.7.1-linux-x86_64.tar.gz.asc -o stack.tar.gz.asc && \
+    # apt-get purge -y --auto-remove curl && \
+    export GNUPGHOME="$(mktemp -d)" && \
+    gpg --keyserver ha.pool.sks-keyservers.net --recv-keys C5705533DA4F78D8664B5DC0575159689BEFB442 && \
+    gpg --batch --verify stack.tar.gz.asc stack.tar.gz && \
+    tar -xf stack.tar.gz -C /usr/local/bin --strip-components=1 && \
+    /usr/local/bin/stack config set system-ghc --global true && \
+    /usr/local/bin/stack config set install-ghc --global false && \
+    rm -rf "$GNUPGHOME" /stack.tar.gz.asc /stack.tar.gz
+
+ENV PATH /root/.cabal/bin:/root/.local/bin:/opt/cabal/2.2/bin:/opt/ghc/8.4.3/bin:$PATH
 
 
-##### Add nix package manager
-# (src is https://github.com/NixOS/docker)
+##### Install server
 
-# Enable HTTPS support in wget.
-RUN apt-get update
-RUN apt-get install -y openssl git wget
-RUN apt-get install bzip2
+RUN apt-get install -y ttf-dejavu graphviz
 
-# Download Nix and install it into the system.
-RUN wget https://nixos.org/releases/nix/nix-2.0.4/nix-2.0.4-x86_64-linux.tar.bz2 \
-  && echo "d6db178007014ed47ad5460c1bd5b2cb9403b1ec543a0d6507cb27e15358341f  nix-2.0.4-x86_64-linux.tar.bz2" | sha256sum -c \
-  && tar xjf nix-*-x86_64-linux.tar.bz2
-RUN mkdir /var/empty
-RUN addgroup --gid 30000 --system nixbld \
-  && for i in $(seq 1 30); do adduser --home /var/empty --system --no-create-home --disabled-password --gecos "Nix build user $i" --uid $((30000 + i)) --ingroup nixbld nixbld$i ; done \
-  && mkdir -m 0755 /nix && USER=root sh nix-*-x86_64-linux/install \
-  && ln -s /nix/var/nix/profiles/default/etc/profile.d/nix.sh /etc/profile.d/ \
-  && rm -r /nix-*-x86_64-linux*
+RUN cabal update
+RUN cabal install text wai wai-websockets warp websockets http-types safe containers mtl turtle aeson optparse-applicative foldl parsec
+RUN cabal install dns
+RUN cabal install process
+RUN cabal install SHA bytestring
+RUN cabal install stm
 
-# Get a specific nixpkgs
-RUN git clone https://github.com/nixos/nixpkgs /root/nixpkgs
-RUN cd /root/nixpkgs && git checkout edd63e05d1e37ed3fb9623aca25c874014d9778c
-
-ONBUILD ENV \
-    ENV=/etc/profile \
-    USER=root \
-    PATH=/nix/var/nix/profiles/default/bin:/nix/var/nix/profiles/default/sbin:/bin:/sbin:/usr/bin:/usr/sbin \
-    GIT_SSL_CAINFO=/nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt \
-    NIX_SSL_CERT_FILE=/nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt
-
-ENV \
-    ENV=/etc/profile \
-    USER=root \
-    PATH=/nix/var/nix/profiles/default/bin:/nix/var/nix/profiles/default/sbin:/bin:/sbin:/usr/bin:/usr/sbin \
-    GIT_SSL_CAINFO=/nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt \
-    NIX_SSL_CERT_FILE=/nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt \
-NIX_PATH=/root/nixpkgs
 
 
 ##### Set up Android Emulator
@@ -100,35 +98,52 @@ ADD config.ini /root/.android/avd/x86.avd/config.ini
 # EXPOSE 5037 5554 5555
 
 
-##### Install server
+##### Build droidstar
 
 WORKDIR /root
 
-RUN nix-env -iA nixpkgs.graphviz
-RUN nix-env -iA nixpkgs.cabal2nix
-RUN nix-env -iA nixpkgs.androidsdk
-
-# COPY ./_server ./server
-# COPY ./exprs.nix ./exprs.nix
-
-RUN git clone https://github.com/cuplv/droidstar-demo
-# RUN cp droidstar-demo/docker-server/exprs.nix ./
-ADD exprs.nix /root/exprs.nix
-RUN nix-env -f exprs.nix -iA sbt-android
-
-RUN cabal2nix droidstar-demo/server > server.nix
-RUN nix-env -f exprs.nix -iA droidstar-demo-server
+RUN echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list && \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823 && \
+    apt-get update && \
+    apt-get install -y openjdk-8-jdk sbt
 
 RUN git clone https://github.com/cuplv/droidstar
 RUN cd droidstar && git checkout demo-config && sbt driverApp/android:package
 
+
+##### Build server
+
+COPY ./_server ./server
+RUN cd /root/server && cabal configure && cabal build
+RUN cp /root/server/dist/build/droidstar-demo-server/droidstar-demo-server /bin/droidstar-demo-server
 EXPOSE 30025
 
-# Add scripts
+
+##### Re-install tools
+
+RUN apt-get update && apt-get install -y unzip
+
+RUN rm -r /opt/android-sdk-linux/tools
+
+RUN curl -L $LINK_ANDROID_SDK > /tmp/android-sdk-linux.zip && \
+    unzip -q /tmp/android-sdk-linux.zip -d /opt/android-sdk-linux/ && \
+    rm /tmp/android-sdk-linux.zip && \
+
+    # Customized steps per specific platform
+    yes | sdkmanager --no_https --licenses && \
+    yes | sdkmanager --no_https platform-tools "platforms;android-26" --verbose
+
+# RUN cp /opt/android-sdk-linux/platform-tools/adb /bin/adb
+
+RUN which adb
+
+
+##### Add scripts
+
 ADD start.sh /start.sh
 RUN chmod +x /start.sh
 
 ADD start-all.sh /start-all.sh
 RUN chmod +x /start-all.sh
 
-CMD /start-all.sh
+CMD ["/start-all.sh"]
