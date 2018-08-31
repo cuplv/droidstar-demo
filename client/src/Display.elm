@@ -80,16 +80,16 @@ lpInput e mode = case (e.status,mode) of
        (case (e.status,mode) of
           (Editing Nothing,Custom) -> 
             [ Block.custom <| textarea [spellcheck False, onInput UpdateLP] [lp2Text e.lp]
-            , Block.custom <| Button.button [Button.success, Button.attrs [onClick BeginLearn]] [text "Learn"]
+            , Block.custom <| div [] [Button.button [Button.success, Button.attrs [onClick BeginLearn]] [text "Learn"]]
             ]
           (Editing (Just _),Custom) ->
             [ Block.custom <|
                 textarea [spellcheck False, onInput UpdateLP, class "compileFailed"] [lp2Text e.lp]
-            , Block.custom <| Button.button [Button.success, Button.attrs [onClick BeginLearn]] [text "Learn"]
+            , Block.custom <| div [] [Button.button [Button.success, Button.attrs [onClick BeginLearn]] [text "Learn"]]
             ]
           (Editing _,Static) ->
             [ Block.custom <| textarea [spellcheck False, readonly True] [lp2Text e.lp]
-            , Block.custom <| Button.button [Button.success, Button.attrs [onClick BeginLearn]] [text "Learn"]
+            , Block.custom <| div [] [Button.button [Button.success, Button.attrs [onClick BeginLearn]] [text "Learn"]]
             ]
           (Compiling, Custom) -> 
             [ Block.custom <|
@@ -212,43 +212,44 @@ showTS nc (ShowTS ts cor) =
 
 learnSection : NetConf -> Exp -> Html Msg
 learnSection nc e = case e.status of
-
-  Editing (Just s) -> div [] <|
-    [ h1 [] [text "Learning"]
-    , div [] [text "Compiler error:"]
-    , div [] [textarea [spellcheck False, readonly True] [text s]]
-    ]
-
-  Compiling -> div [] <|
-    [ h1 [] [text "Learning"]
-    , div [] [text "Compiling custom LearningPurpose..."]
-    , img [ class "loadingicon", src "/static/triangles.gif" ] []
-    ]
-
-  Running ls -> div [] <|
-    [ h1 [] [text "Learning"]
-    , learningDoc
-    , traces ls
-    ]
-    ++
-    learnStatus nc ls
-
-  Finished ls mts -> div [] <|
-    [ h1 [] [text "Learning"]
-    , traces ls
-    ]
-    ++
-    (case mts of
-       Just ts -> [showTS nc ts]
-       Nothing -> [])
-
-  _ -> div [] []
-
+  Editing Nothing -> div [] []
+  _ -> Card.config [Card.outlinePrimary, Card.attrs [class "mt-4"]]
+    |> Card.headerH4 [] [text "Progress"]
+    |> Card.block [] [ Block.custom (case e.status of
+    
+      Editing (Just s) -> div [] <|
+        [ div [] [text "Compiler error:"]
+        , div [] [textarea [spellcheck False, readonly True] [text s]]
+        ]
+    
+      Compiling -> div [] <|
+        [ div [] [text "Compiling custom LearningPurpose..."]
+        , img [ class "loadingicon", src "/static/triangles.gif" ] []
+        ]
+    
+      Running ls -> div [] <|
+        [ learningDoc
+        , traces ls
+        ]
+        ++
+        learnStatus nc ls
+    
+      Finished ls mts -> div [] <|
+        [ traces ls
+        ]
+        ++
+        (case mts of
+           Just ts -> [showTS nc ts]
+           Nothing -> [])
+    
+      _ -> div [] []) ]
+    |> Card.view
+    
 resultsSection : NetConf -> Exp -> Html msg
 resultsSection nc e = case resultTS e of
-  Just ts -> div [] 
-    [ h1 [] [text "Results"]
-    , resultsDoc
-    , showTS nc ts
-    ]
+  Just ts ->
+    Card.config [Card.outlineSuccess, Card.attrs [class "mt-4"]]
+      |> Card.headerH4 [] [text "Results"]
+      |> Card.block [] [Block.custom (showTS nc ts)]
+      |> Card.view
   _ -> div [] []
