@@ -44,16 +44,36 @@ view2 : Model -> Html Msg
 view2 model = case model.netConf.connection of
   Just mode ->
     div [] <|
-      [ styleHeader
-      -- , alertSection model.alertLog
-      , inputSection model mode
-      ] ++
+      (case model.selectedItem of 
+         Just _ -> []
+         Nothing -> [ inputsDoc ])
+      ++
+      [ Dropdown.dropdown
+          model.dropdown
+          { options = [ ]
+          , toggleMsg = DropdownUpdate
+          , toggleButton =
+              Dropdown.toggle
+                [ Button.primary, Button.attrs [ class "mt-4" ] ]
+                [ text (case model.selectedItem of
+                          Just exp -> exp.lp.name
+                          Nothing -> "Classes") ]
+          , items = List.map (\lp ->
+              Dropdown.buttonItem [ onClick (ExpSelected lp) ] [ text lp.name ]
+            ) model.items
+          }
+      ]
+      ++
       (case model.selectedItem of
          Just e ->
-           [ learnSection model.netConf e
-           , resultsSection model.netConf e
+           [ resultsSection model.netConf e
+           , learnSection model.netConf e
            ]
          Nothing -> [])
+      ++
+      [ styleHeader
+      , inputSection model mode
+      ]
   Nothing -> div [] [text "Waiting for available server..."]
 
 alertSection : List Alert -> Html msg
@@ -108,26 +128,6 @@ lpInput e mode = case (e.status,mode) of
 
 inputSection : Model -> ServerMode -> Html Msg
 inputSection model mode = div [] <|
-  (case model.selectedItem of 
-     Just _ -> []
-     Nothing -> [ inputsDoc ])
-  ++
-  [ Dropdown.dropdown
-      model.dropdown
-      { options = [ ]
-      , toggleMsg = DropdownUpdate
-      , toggleButton =
-          Dropdown.toggle
-            [ Button.primary, Button.attrs [ class "mt-4" ] ]
-            [ text (case model.selectedItem of
-                      Just exp -> exp.lp.name
-                      Nothing -> "Classes") ]
-      , items = List.map (\lp ->
-          Dropdown.buttonItem [ onClick (ExpSelected lp) ] [ text lp.name ]
-        ) model.items
-      }
-  ]
-  ++
   (case model.selectedItem of
    Just e ->
      [ Grid.row []
@@ -212,10 +212,17 @@ showTS nc (ShowTS ts cor) =
             Bad -> "bad-ts"
   in img [ class c, src (tsURI nc ts) ] []
 
+spaceClass status = case status of
+  Finished _ _ -> ""
+  Compiling -> ""
+  _ -> " learningsection"
+
 learnSection : NetConf -> Exp -> Html Msg
 learnSection nc e = case e.status of
   Editing Nothing -> div [] []
-  _ -> Card.config [Card.outlinePrimary, Card.attrs [class "mt-4 learningsection"]]
+  _ -> Card.config
+         [ Card.outlinePrimary
+         , Card.attrs [class ("mt-4" ++ spaceClass e.status)]]
     |> Card.headerH4 [] [text "Progress"]
     |> Card.block [] [ Block.custom (case e.status of
     
@@ -225,13 +232,12 @@ learnSection nc e = case e.status of
         ]
     
       Compiling -> div [] <|
-        [ div [] [text "Compiling custom LearningPurpose..."]
+        [ div [] [text "Compiling LearningPurpose..."]
         , img [ class "loadingicon", src "/static/triangles.gif" ] []
         ]
     
       Running ls -> div [] <|
-        [ learningDoc
-        , traces ls
+        [ traces ls
         ]
         ++
         learnStatus nc ls
