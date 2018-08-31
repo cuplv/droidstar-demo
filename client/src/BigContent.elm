@@ -213,7 +213,41 @@ public class CountDownTimerLP extends LearningPurpose {
 """
 
 fileObserverDocs : Html msg
-fileObserverDocs = div [] []
+fileObserverDocs = div []
+  [ Markdown.toHtml [ class "docs" ] """
+
+The
+[`FileObserver`](https://developer.android.com/reference/android/os/FileObserver)
+monitors files, sending callback notifications when they are altered.
+
+It has the following API:
+
+"""
+  , mkapi
+      [ [ "void"
+        , "startWatching()"
+        , "Start watching for events."
+        ]
+      , [ "void"
+        , "stopWatching()"
+        , "Stop watching for events."
+        ]
+      , [ "abstract void"
+        , "onEvent(int,String)"
+        , "Triggers on a file event."
+        ]
+      ]
+  , Markdown.toHtml [ class "docs" ] """
+
+Similarly to the `SQLiteOpenHelper` experiment, the LearningPurpose
+for this class uses non-standard callins and callbacks.  We encode
+file manipulations (deleting and modifying) as callins, and we split
+the `onEvent(int,String)` callback into two separate output symobls
+for detection of modification and deletion.
+
+"""
+  ]
+
 
 fileObserverDef : String
 fileObserverDef = """
