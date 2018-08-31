@@ -212,6 +212,9 @@ public class CountDownTimerLP extends LearningPurpose {
 }
 """
 
+fileObserverDocs : Html msg
+fileObserverDocs = div [] []
+
 fileObserverDef : String
 fileObserverDef = """
 package edu.colorado.plv.droidstar.experiments.lp;
@@ -349,6 +352,11 @@ public class FileObserverLP extends LearningPurpose {
 }
 """
 
+
+velocityTrackerDocs : Html msg
+velocityTrackerDocs = div [] []
+
+
 velocityTrackerDef : String
 velocityTrackerDef = """
 package edu.colorado.plv.droidstar.experiments.lp;
@@ -414,6 +422,77 @@ public class VelocityTrackerLP extends LearningPurpose {
     }
 }
 """
+
+mktds ls = List.map (\s -> Table.td [] [text s]) ls
+
+mkapi lls = Table.table
+  { options = [Table.striped, Table.hover]
+  , thead = Table.simpleThead
+      [ Table.th [] [ text "Return" ]
+      , Table.th [] [ text "Method" ]
+      , Table.th [] [ text "Description" ]
+      ]
+  , tbody = Table.tbody []
+      (List.map (\ls -> Table.tr [] (mktds ls)) lls)
+  }
+
+asyncTaskDocs : Html msg
+asyncTaskDocs = div []
+  [ Markdown.toHtml [ class "docs" ] """
+
+The
+[`AsyncTask`](https://developer.android.com/reference/android/os/AsyncTask)
+performs some long-running task in the background, notifying its app
+via callback when it has finished
+
+It has the following API.
+
+"""
+  , mkapi
+      [ [ "final AsyncTask"
+        , "execute(Params...)"
+        , "Executes task."
+        ]
+      , [ "final boolean"
+        , "cancel(boolean)"
+        , "Attempts to cancel execution of task."
+        ]
+      , [ "final boolean"
+        , "isCancelled()"
+        , "Returns true if this task was cancelled."
+        ]
+      , [ "void"
+        , "onCancelled()"
+        , "Runs when task is cancelled."
+        ]
+      , [ "void"
+        , "onPostExecute(Result)"
+        , "Runs when task is finished."
+        ]
+      , [ "void"
+        , "onPreExecute()"
+        , "Runs just before task begins."
+        ]
+      ]
+  , Markdown.toHtml [ class "docs" ] """
+
+In our provided LearningPurpose, we analyze the result of
+`isCancelled()` by throwing an error if it returns `false`.  This
+causes it to appear as "enabled" in the resulting callback typestate
+only in places where it returns `true`.  This is an example of the
+flexibility a developer has in tuning the behavior they need DroidStar
+to learn.
+
+Questions we may have about `AsyncTask`'s behavior are:
+
+1. Can we call `execute()` after `cancel()`?  If so, does the task
+   indeed execute?
+2. Is it possible to receive `onPostExecute()` after calling
+   `cancel()` too late?
+
+"""
+  ]
+
 
 asyncTaskDef : String
 asyncTaskDef = """
@@ -559,6 +638,65 @@ callin in the sequence is applied in a state where it is not enabled
 (there is no arrow labeled with it leaving the state).
 
 """
+
+sqliteOpenHelperDocs : Html msg
+sqliteOpenHelperDocs = div []
+  [ Markdown.toHtml [ class "docs" ] """
+
+The
+[`SQLiteOpenHelper`](https://developer.android.com/reference/android/database/sqlite/SQLiteOpenHelper)
+helps manage database creation and version management, automatically
+performing loading and upgrading operations as they are required.
+
+It has a large API; we are interested in the following subset:
+
+"""
+  , mkapi
+      [ [ "SQLiteDatabase"
+        , "getWritableDatabase()"
+        , "Create and/or open a database that can be read and written."
+        ]
+      , [ "void"
+        , "close()"
+        , "Close any open database object."
+        ]
+      , [ "void"
+        , "onConfigure(SQLiteDatabase)"
+        , "Called when the database connection is being configured."
+        ]
+      , [ "abstract void"
+        , "onCreate(SQLiteDatabase)"
+        , "Called when the database is created the first time."
+        ]
+      , [ "void"
+        , "onOpen(SQLiteDatabase)"
+        , "Called when the database has been opened."
+        ]
+      , [ "void"
+        , "onUpgrade(SQLiteDatabase,int,int)"
+        , "Called when the database needs to be upgraded."
+        ]
+      ]
+  , Markdown.toHtml [ class "docs" ] """
+
+The LearningPurpose we have provided for this class defines a highly
+customized experiment.
+
+The behavior of a `SQLiteOpenHelper` object mostly depends on the
+details of the database it has been given, in particular its
+**version** and **whether or not it exists yet**.
+
+In this experiment, we split the single entry callin
+`getWritableDatabase()` into several forms that each get a different
+database (one that exists, one that doesn't, one that is out of date,
+etc.) and see which callbacks each callin produces, and in what order.
+
+Finally, we analyze the behavior of `close()` to understand when it
+can be called and what processes it can interrupt.
+
+"""
+  ]
+
 
 sqliteHelperDef : String
 sqliteHelperDef = """

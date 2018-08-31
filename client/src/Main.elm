@@ -42,19 +42,19 @@ init l =
      , { name = "AsyncTask"
        , lpText = asyncTaskDef
        , langMode = ScalaMode
-       , docs = div [] [] }
+       , docs = asyncTaskDocs }
      , { name = "SQLiteOpenHelper"
        , lpText = sqliteHelperDef
        , langMode = ScalaMode
-       , docs = div [] [] }
+       , docs = sqliteOpenHelperDocs }
      , { name = "FileObserver"
        , lpText = fileObserverDef
        , langMode = JavaMode
-       , docs = div [] [] }
+       , docs = fileObserverDocs }
      , { name = "VelocityTracker"
        , lpText = velocityTrackerDef
        , langMode = JavaMode
-       , docs = div [] [] }
+       , docs = velocityTrackerDocs }
      ]
      Nothing
      { loc = l.hostname, connection = Nothing }
