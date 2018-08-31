@@ -15,6 +15,8 @@ import Bootstrap.Grid as Grid
 import Bootstrap.Navbar as Navbar
 import Bootstrap.Dropdown as Dropdown
 import Bootstrap.Button as Button
+import Bootstrap.Card as Card
+import Bootstrap.Card.Block as Block
 
 view : Model -> Html Msg
 view model = Grid.container []
@@ -63,35 +65,47 @@ styleHeader = node "link" [ rel "stylesheet", href "/css/dropdown.css" ] []
 lp2Text : LP -> Html msg
 lp2Text lp = text lp.lpText
 
+chooseOutline e mode = case (e.status,mode) of
+  (Editing Nothing, Custom) -> Card.outlineWarning
+  (Compiling, Custom) -> Card.outlineWarning
+  (Editing (Just _), Custom) -> Card.outlineDanger
+  (_,Static) -> Card.outlinePrimary
+  (_,Custom) -> Card.outlineSuccess
+
 lpInput : Exp -> ServerMode -> Html Msg
 lpInput e mode = case (e.status,mode) of
-  (Editing Nothing,Custom) -> div []
-    [ div [] [textarea [spellcheck False, onInput UpdateLP] [lp2Text e.lp]]
-    , div [] [button [onClick BeginLearn] [text "Learn"]]
-    ]
-  (Editing (Just _),Custom) -> div []
-    [ div [] [textarea
-                [spellcheck False, onInput UpdateLP, class "compileFailed"]
-                [lp2Text e.lp]]
-    , div [] [button [onClick BeginLearn] [text "Learn"]]
-    ]
-  (Editing _,Static) -> div []
-    [ textarea [spellcheck False, readonly True] [lp2Text e.lp]
-    , div [] [button [onClick BeginLearn] [text "Learn"]]
-    ]
-  (Compiling, Custom) -> div []
-    [ textarea [spellcheck False, readonly True, class "compiling"] [lp2Text e.lp]
-    ]
-  (_, Custom) -> div []
-    [ textarea [spellcheck False, readonly True, class "compileSucceeded"] [lp2Text e.lp]
-    ]
-  _ -> div []
-    [ textarea [spellcheck False, readonly True] [lp2Text e.lp]
-    ]
+  (_,_) -> Card.config [ chooseOutline e mode, Card.attrs [class "mt-4"] ]
+    |> Card.headerH4 [] [text "LearningPurpose"]
+    |> Card.block []
+       (case (e.status,mode) of
+          (Editing Nothing,Custom) -> 
+            [ Block.custom <| textarea [spellcheck False, onInput UpdateLP] [lp2Text e.lp]
+            , Block.custom <| Button.button [Button.success, Button.attrs [onClick BeginLearn]] [text "Learn"]
+            ]
+          (Editing (Just _),Custom) ->
+            [ Block.custom <|
+                textarea [spellcheck False, onInput UpdateLP, class "compileFailed"] [lp2Text e.lp]
+            , Block.custom <| Button.button [Button.success, Button.attrs [onClick BeginLearn]] [text "Learn"]
+            ]
+          (Editing _,Static) ->
+            [ Block.custom <| textarea [spellcheck False, readonly True] [lp2Text e.lp]
+            , Block.custom <| Button.button [Button.success, Button.attrs [onClick BeginLearn]] [text "Learn"]
+            ]
+          (Compiling, Custom) -> 
+            [ Block.custom <|
+                textarea [spellcheck False, onInput UpdateLP, class "compiling"] [lp2Text e.lp]
+            ]
+          (_, Custom) -> 
+            [ Block.custom <|
+                textarea [spellcheck False, readonly True, class "compileSucceeded"] [lp2Text e.lp]
+            ]
+          _ ->
+            [ Block.custom <| textarea [spellcheck False, readonly True] [lp2Text e.lp]
+            ])
+    |> Card.view
 
 inputSection : Model -> ServerMode -> Html Msg
 inputSection model mode = div [] <|
-  -- [ h1 [] [text "Inputs"]
   (case model.selectedItem of 
      Just _ -> []
      Nothing -> [ inputsDoc ])
@@ -110,23 +124,20 @@ inputSection model mode = div [] <|
           Dropdown.buttonItem [ onClick (ExpSelected lp) ] [ text lp.name ]
         ) model.items
       }
-  -- , Html.map ExpSelected <|
-  --     Dropdown.view
-  --       model.items
-  --       (case model.selectedItem of
-  --          Just e -> Just e.lp
-  --          Nothing -> Nothing)
-  --       .name
-  --       model.dropdown
   ]
   ++
   (case model.selectedItem of
-   Just e -> [e.lp.docs]
+   Just e ->
+     [ Grid.row []
+         [ Grid.col [] [
+           Card.config [ Card.outlinePrimary, Card.attrs [class "mt-4"] ]
+             |> Card.headerH4 [] [text "Class Documentation"]
+             |> Card.block [] [Block.custom e.lp.docs]
+             |> Card.view ]
+         , Grid.col [] [ lpInput e mode ]
+         ]
+     ]
    Nothing -> [])
-  ++
-  (case model.selectedItem of
-     Just e -> [lpInput e mode]
-     Nothing -> [])
 
 numberInputs : List String -> List String
 numberInputs = numi 1
