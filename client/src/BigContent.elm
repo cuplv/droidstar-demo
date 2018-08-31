@@ -388,7 +388,54 @@ public class FileObserverLP extends LearningPurpose {
 
 
 velocityTrackerDocs : Html msg
-velocityTrackerDocs = div [] []
+velocityTrackerDocs = div []
+  [ Markdown.toHtml [ class "docs" ] """
+
+The
+[`VelocityTracker`](https://developer.android.com/reference/android/view/VelocityTracker)
+keeps track of touch and slide events.
+
+It has the following API:
+
+"""
+  , mkapi
+      [ [ "void"
+        , "addMovement(MotionEvent)"
+        , "Add a user's movement to the tracker."]
+      , [ "void"
+        , "clear()"
+        , "Reset the velocity tracker back to its initial state."
+        ]
+      , [ "void"
+        , "computeCurrentVelocity(int,float)"
+        , "Compute the current velocity."
+        ]
+      , [ "float"
+        , "getXVelocity(int)"
+        , "Retrieve last computed X velocity"
+        ]
+      , [ "void"
+        , "recycle()"
+        , "Return a VelocityTracker object back to be re-used by others."
+        ]
+      ]
+  , Markdown.toHtml [ class "docs" ] """
+
+This is a special case for DroidStar; `VelocityTracker` has no
+callbacks or asynchronous behavior, so we are in this case learning a
+traditional synchronous typestate.
+
+Synchronous behavior can still be interesting.  We are checking here
+whether any methods disable other methods.  In particular it seems
+that `recycle()` should put the object in a "dead" state in which the
+other methods return errors, so that no app accidentally continues
+using it.
+
+So does it have the expected behavior?
+
+"""
+  ]
+
 
 
 velocityTrackerDef : String
