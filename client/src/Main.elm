@@ -75,20 +75,6 @@ update msg model =
           , alertLog = []
        }
        , Cmd.none)
-    -- ExpSelected ddmsg ->
-    --   let
-    --     ( updatedDropdown, event ) =
-    --       Dropdown.update ddmsg model.dropdown
-    --   in
-    --     case event of
-    --       ItemSelected exp ->
-    --         ({ model
-    --             | dropdown = updatedDropdown
-    --             , selectedItem = Just { lp = exp, status = Editing Nothing }
-    --             , alertLog = []
-    --         }
-    --         , Cmd.none)
-    --       _ -> ({ model | dropdown = updatedDropdown }, Cmd.none)
 
     ServerMsg smsg -> case smsg of
       SHello m ->

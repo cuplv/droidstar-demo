@@ -213,7 +213,7 @@ showTS nc (ShowTS ts cor) =
 learnSection : NetConf -> Exp -> Html Msg
 learnSection nc e = case e.status of
   Editing Nothing -> div [] []
-  _ -> Card.config [Card.outlinePrimary, Card.attrs [class "mt-4"]]
+  _ -> Card.config [Card.outlinePrimary, Card.attrs [class "mt-4 learningsection"]]
     |> Card.headerH4 [] [text "Progress"]
     |> Card.block [] [ Block.custom (case e.status of
     
