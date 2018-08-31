@@ -18,19 +18,21 @@ import Bootstrap.Button as Button
 import Bootstrap.Card as Card
 import Bootstrap.Card.Block as Block
 
+import Color
+
 view : Model -> Html Msg
-view model = Grid.container []
+view model = div []
   [ CDN.stylesheet
   , navbar model
-  , view2 model
+  , Grid.container []
+      [ view2 model ]
   ]
 
 navbar : Model -> Html Msg
 navbar model =
   Navbar.config (\_ -> NoMsg)
-    -- |> Navbar.withAnimation
-    |> Navbar.container
     |> Navbar.brand [ href "#" ] [ text "DroidStar" ]
+    |> Navbar.darkCustom (Color.rgb 86 90 92)
     |> Navbar.items
        [ Navbar.itemLink
            [ href "http://plv.colorado.edu/droidstar/demo-tutorial" ]
@@ -116,7 +118,7 @@ inputSection model mode = div [] <|
       , toggleMsg = DropdownUpdate
       , toggleButton =
           Dropdown.toggle
-            [ Button.primary ]
+            [ Button.primary, Button.attrs [ class "mt-4" ] ]
             [ text (case model.selectedItem of
                       Just exp -> exp.lp.name
                       Nothing -> "Classes") ]
